@@ -1,0 +1,110 @@
+<html>
+    <head>
+        <title>Pixel Hunter</title>
+        <style>
+
+            body {
+                background-color:#18241b;
+                color: white;
+            }
+            .app_frame {
+                display: grid;
+                /* flex-direction: row; */
+                grid-template-columns: 1fr 0fr;
+                grid-template-rows: 1fr 0fr;
+            }
+
+            .app_frame * {
+                padding: 5px;
+            }
+
+            .image_viewer {
+                /* flex: 1; */
+                grid-column: 1;
+                grid-row: 1;
+                max-width: 800;
+                min-height: 600;
+                max-height: 800;
+                overflow: scroll;
+                position: relative;
+                padding: 0;
+                margin: 5px;
+            }
+
+            .image_viewer * {
+                position: absolute;
+                padding: 0;
+            }
+
+            .image_viewer_disclaimer {
+                color: gray;
+                opacity: 0.6;
+                vertical-align: center;
+                text-align: center;
+                height: 100%;
+                z-index: -10;
+                user-select: none;
+            }
+
+            .image_info {
+                grid-column: 1;
+                grid-row: 3;
+                display:flex;
+                flex-direction: row;
+            }
+            .image_tab_header {
+                /* grid-row: 2 */
+                display: flex;
+                flex-direction: row;
+            }
+            .image_tab_header p {
+                background-color: darkblue;
+                cursor: pointer;
+                user-select: none;
+                font-size: 10;
+                font-weight: 800;
+            }
+            .image_tab_header p.selected {
+                background-color:rgb(68, 180, 218)
+            }
+
+            .controls {
+                grid-column: 2;
+                grid-row: 1/10;
+                
+                /* flex: 0; */
+                display: flex;
+                flex-direction: column;
+                background-color: #233828;
+                min-width: 200px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="app_frame">
+            <div class="image_viewer">
+                <!-- <img src="media/Untitled.dib"> -->
+                <!-- This needs to be dynamically edited to allow for resolution -->
+                <div class="image_viewer_disclaimer">Drag image here</div>
+            </div>
+            <div class="image_tab_header">
+                <!-- <div>image_1</div> -->
+            </div>
+            <div class="image_info">
+                <p class="visible_debug"></p>
+                <p>Mouse:<span class="mouse_pos">(0,0)</span></p>
+                <p>Zoom:<span class="zoom_value">100%</span></p>
+            </div>
+            <div class="rect_info">
+                <p>Rect: <span class="rect_coords"></span></p>
+            </div>
+
+            <div class="controls">
+                <p>Title: Pixel Hunter</p>
+                <button >Press Me</button>
+            </div>
+        </div>
+    </body>
+    <script type="text/javascript" src="DrawObjects.js"></script>
+    <script type="text/javascript" src="pixelhunter.js"></script>
+</html>
