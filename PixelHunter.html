@@ -22,9 +22,12 @@
                 /* flex: 1; */
                 grid-column: 1;
                 grid-row: 1;
-                max-width: 800;
+                /* max-width: 800; */
                 min-height: 600;
                 max-height: 800;
+
+                width: 100%;
+                height: 100%;
                 overflow: scroll;
                 position: relative;
                 padding: 0;
@@ -34,6 +37,19 @@
             .image_viewer * {
                 position: absolute;
                 padding: 0;
+            }
+
+            .image_viewer canvas.image {
+                display: none;
+            }
+
+            .image_viewer canvas.visible {
+                display: inherit;
+            }
+
+            .image_viewer.color_mode canvas.image,
+            .image_viewer.color_mode canvas.draw {
+                display:none;
             }
 
             .image_viewer_disclaimer {
@@ -68,6 +84,11 @@
                 background-color:rgb(68, 180, 218)
             }
 
+            .color_plot {
+                height: 100%;
+                width: 100%;
+            }
+
             .controls {
                 grid-column: 2;
                 grid-row: 1/10;
@@ -86,6 +107,7 @@
                 <!-- <img src="media/Untitled.dib"> -->
                 <!-- This needs to be dynamically edited to allow for resolution -->
                 <div class="image_viewer_disclaimer">Drag image here</div>
+                <div class="color_plot"></div>
             </div>
             <div class="image_tab_header">
                 <!-- <div>image_1</div> -->
@@ -101,10 +123,15 @@
 
             <div class="controls">
                 <p>Title: Pixel Hunter</p>
-                <button >Press Me</button>
+                <p>STATE: <span id="state_display"></span></p>
+                <button id="rect_btn" disabled onclick="switchState(App.STATES.RECT)">RECT</button>
+                <button id="color_btn" disabled="" onclick="switchState(App.STATES.COLOR)">COLOR</button>
+                <button id="ident_btn" disabled=""  onclick="switchState(App.STATES.IDENT)">IDENT</button>
             </div>
         </div>
     </body>
+    <script src="https://cdn.plot.ly/plotly-2.32.0.min.js" charset="utf-8"></script>
+    <script type="text/javascript" src="ColorGraph.js"></script>
     <script type="text/javascript" src="DrawObjects.js"></script>
     <script type="text/javascript" src="pixelhunter.js"></script>
 </html>

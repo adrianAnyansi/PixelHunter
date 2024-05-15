@@ -1,12 +1,39 @@
+# Overall
+
+Plotly is mostly explored; I cant do much else there since the circles can't be scaled properly
+Gonna start working on small things, so I can make some amount of progress towards having a running program
+
 # Today
 
-ImageViewer mostly done, rect also done
+Rewrite the zindex system, just have different states
+also make an overall class so it's not dumb & brute force the images
+add overall state
+add zoom controls to rect to check stuff (change scale somehow?)
+finish rect controls + copy so I can use it for testing actually
+make sure to lock rect so I don't edit it by accident
+
+try web worker and grab the data from it for the color mode
+then if I have time, try updating that mode
+
+
 
 # Mode completion
-## Zoom controls
-- Use Alt/Ctrl wheel for zooming (scale)
+Overall design is split into separate parts to help with pixel hunter
+RECT mode helps with figuring out sizing & for other modes
+    - draw a rect on screen, correct with key presses
+    - copy value to clipboard
+COLOR mode helps isolating and testing binarization & etc
+    - REQUIRES RECT
+    - draw rect in 3D to isolate colours
+    - copy answer to clipboard
+IDENT mode helps with checking certain states
+    - REQUIRES RECT
+    - REQUIRES COLOR
+    - So its a little weird cause I want to randomly sample to be quick, which means targetting certain colours and positions over multiple images
+    - I want to think about this more
 
 ## Rect mode
+- Use Alt/Ctrl wheel for zooming (scale)
 - Copy rect coords to clipboard
 - Enable keyboard shortcuts for rect movement
     - Q to select top-left corner

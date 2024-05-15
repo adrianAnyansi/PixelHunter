@@ -1,5 +1,69 @@
 
-// First, build the drawing canvas
+// First, build main system
+
+/** Main control state */
+class App {
+    static STATES = {
+        NONE: 'NONE',
+        RECT: 'RECT',
+        COLOR: 'COLOR',
+        IDENTITY: 'IDENTITY'
+    }
+    static state = App.STATES.NONE;
+    static visibleTabIndex = -1;
+}
+
+
+const stateEl = document.querySelector("#state_display")
+const rectStateBtn = document.getElementById("rect_btn");
+const colorStateBtn = document.getElementById("color_btn");
+const identStateBtn = document.getElementById("ident_btn");
+
+/** switch app state to a new state */
+function switchState(new_state) {
+    switch(new_state) {
+        case App.STATES.NONE:
+            rectStateBtn.disabled =  false
+            colorStateBtn.disabled = false;
+            // identStateBtn.disabled = false;
+            break;
+        case App.STATES.RECT:
+            rectStateBtn.disabled = true
+            colorStateBtn.disabled = false;
+            // identStateBtn.disabled = false;
+            break
+        case App.STATES.COLOR:
+            if (visibleTabIndex < 0) return
+            rectStateBtn.disabled = false
+            colorStateBtn.disabled = true;
+            switchToColorMode()
+            // identStateBtn.disabled = true;
+            break;
+        default:
+            console.warn("Not implemented you dweeb")
+            return
+    }
+
+    App.state = new_state
+    stateEl.textContent = new_state
+}
+
+function switchToColorMode() {
+    // TODO: Make sure 1 image is available
+
+    // TODO: Make sure Rect is highlighted
+    const currTabTracker = ImageElTracker[visibleTabIndex]
+    currTabTracker.canvas.classList.remove('visible')
+
+    // Show plotly canvas/div on top
+    colorPlotEl.classList.add('visible')
+    imageViewerDiv.classList.add('color_mode')
+
+    // TODO: Defer this to worker
+    // ColorThreshold.imgBuffer = currTabTracker.ctx.getImageData(...drawMonitor.queue[0].toArray())
+    ColorThreshold.registerRect(currTabTracker.ctx, drawMonitor.queue[0].toArray())
+    ColorThreshold.calcPixels()
+}
 
 /** @type {ImageTab[]} Tracks images being shown (and binizaration/chart renders) */
 const ImageElTracker = []
@@ -23,7 +87,6 @@ class ImageTab {
 // Setup image drag-n-drop
 const imageViewerDiv = document.querySelector('.image_viewer')
 imageViewerDiv.addEventListener('drop', imageDropHandler);
-// imageViewerDiv.addEventListener('drop', event => console.log('hi'));
 imageViewerDiv.addEventListener('dragover', (dragEvent) => {
     dragEvent.preventDefault();
     dragEvent.dataTransfer.dropEffect = "copy";
@@ -33,7 +96,6 @@ imageViewerDiv.addEventListener('dragover', (dragEvent) => {
 //     dragEvent.dataTransfer.dropEffect = "copy";
 // });
 
-// imageViewerDiv.addEventListener('mousemove', mouseMoveHandler)
 const mousePosDisplayEl = document.querySelector(".mouse_pos")
 const rectCoordDisplayEl = document.querySelector(".rect_coords")
 
@@ -48,7 +110,9 @@ imageViewerDiv.appendChild(drawCanvas);
 drawMonitor.register(imageViewerDiv)
 // setInterval(drawMonitor.drawPerFrame.bind(drawMonitor), 1000/30);
 
+// ===========================================================================================
 
+const colorPlotEl = document.querySelector(".color_plot");
 
 const imageTabHeaderDiv = document.querySelector('.image_tab_header');
 
@@ -99,6 +163,7 @@ async function createNewImageCanvas(imageBlob, img_name) {
     drawCanvas.height = imgBitmap.height
     
     const newCanvas = document.createElement('canvas');
+    newCanvas.classList.add("image")
     newCanvas.width = imgBitmap.width
     newCanvas.height = imgBitmap.height
     newCanvas.getContext('2d').drawImage(imgBitmap, 0, 0)
@@ -109,14 +174,14 @@ async function createNewImageCanvas(imageBlob, img_name) {
 /** Add image to viewer + tab header + focus */
 function addNewImageToViewer(newImgCanvas, img_name) {
     // Add canvas with highest z-index
-    let highestZIndex = -1;
-    for (const imageTab of ImageElTracker) {
-        highestZIndex = Math.max(parseInt(imageTab.canvas.style.zIndex), highestZIndex)   
-    }
+    // let highestZIndex = -1;
+    // for (const imageTab of ImageElTracker) {
+    //     highestZIndex = Math.max(parseInt(imageTab.canvas.style.zIndex), highestZIndex)   
+    // }
     
     // Tab should already go on-top
-    newImgCanvas.style.zIndex = highestZIndex + 1;
-    console.log(`added ${highestZIndex+1}`)
+    // newImgCanvas.style.zIndex = highestZIndex + 1;
+    // console.log(`added ${highestZIndex+1}`)
 
     // add canvas and add new tab
     imageViewerDiv.appendChild(newImgCanvas)
@@ -129,13 +194,13 @@ function addNewImageToViewer(newImgCanvas, img_name) {
 
     let imgTracker = new ImageTab(newImgCanvas, newImgCanvas.getContext('2d'), imgHeader)
     ImageElTracker.push(imgTracker)
-    console.log("pushed")
+    console.log("pushed new img")
 
     // because the visible tab is the current one,
     // this causes swap or header issues
-    if (visibleTabIndex >= 0)
-        ImageElTracker[visibleTabIndex].header.classList.remove('selected', true)
-    visibleTabIndex = tab_idx
+    // if (visibleTabIndex >= 0)
+    //     ImageElTracker[visibleTabIndex].header.classList.remove('selected', true)
+    // visibleTabIndex = tab_idx
     // document.querySelector('.visible_debug').textContent = visibleTabIndex
 
     swapToImage(tab_idx)
@@ -145,26 +210,42 @@ function addNewImageToViewer(newImgCanvas, img_name) {
 function swapToImage(tab_idx) {
     if (tab_idx >= ImageElTracker.length) return
 
-    // TODO: Could use a simpler "hidden" instead of z-fighting
-
-    const new_topTab = ImageElTracker[tab_idx].canvas
     if (visibleTabIndex >= 0 && visibleTabIndex != tab_idx) {
-        
-        // console.debug(`Switching to tab ${visibleTabIndex} -> ${tab_idx}`)
-        
-        let topZIndex = 0;
-        let currTabTracker = null
-        currTabTracker = ImageElTracker[visibleTabIndex]
-        
-        currTabTracker.header.classList.remove('selected', true)
-        // swap zindexes
-        topZIndex = currTabTracker.canvas.style.zIndex
-        currTabTracker.canvas.style.zIndex = new_topTab.style.zIndex;
-
-        new_topTab.style.zIndex = topZIndex;
+        let currTabTracker = ImageElTracker[visibleTabIndex]
+        currTabTracker.canvas.classList.remove('visible')
+        currTabTracker.header.classList.remove('selected')
     }
 
     visibleTabIndex = parseInt(tab_idx)
-    // document.querySelector('.visible_debug').textContent = visibleTabIndex
-    ImageElTracker[tab_idx].header.classList.add('selected', true)
+    ImageElTracker[tab_idx].header.classList.add('selected')
+    ImageElTracker[tab_idx].canvas.classList.add('visible')
+
+    // const new_topTab = ImageElTracker[tab_idx].canvas
+    // if (visibleTabIndex >= 0 && visibleTabIndex != tab_idx) {
+        
+    //     // console.debug(`Switching to tab ${visibleTabIndex} -> ${tab_idx}`)
+        
+    //     let topZIndex = 0;
+    //     let currTabTracker = null
+    //     currTabTracker = ImageElTracker[visibleTabIndex]
+        
+    //     currTabTracker.header.classList.remove('selected', true)
+    //     // swap zindexes
+    //     topZIndex = currTabTracker.canvas.style.zIndex
+    //     currTabTracker.canvas.style.zIndex = new_topTab.style.zIndex;
+
+    //     new_topTab.style.zIndex = topZIndex;
+    // }
+
+    // visibleTabIndex = parseInt(tab_idx)
+    // // document.querySelector('.visible_debug').textContent = visibleTabIndex
+    // ImageElTracker[tab_idx].header.classList.add('selected', true)
 }
+
+
+/** Pretend this is the IILE shit */
+function init () {
+    
+    switchState(App.STATES.RECT)
+}
+init()

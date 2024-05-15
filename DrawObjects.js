@@ -51,7 +51,7 @@ class DrawingMonitor {
      */
     mouseDownHandler(mouseEvent) {
         // TODO: Check if pointer_down is already set
-        if (mouseEvent.button == 0) {
+        if (App.state === App.STATES.RECT && mouseEvent.button == 0) {
             // console.log("mouse down")
             DrawingMonitor.POINTER_DOWN = true
             this.pointer_origin = new Point(mouseEvent.offsetX, mouseEvent.offsetY)
@@ -123,7 +123,7 @@ class DrawingMonitor {
             drawRect.width = mouseEvent.offsetX - this.pointer_origin.x
             drawRect.height = mouseEvent.offsetY - this.pointer_origin.y
 
-            rectCoordDisplayEl.textContent = drawRect.print()
+            rectCoordDisplayEl.textContent = drawRect.toString()
         }
     }
 
@@ -157,7 +157,12 @@ class DrawableRectangle {
     }
 
     toString() {
+        // TODO: Normalize ( no negative width/height)
         return `[x:${this.x}, y:${this.y}, w:${this.width}, h:${this.height}]`
+    }
+
+    toArray() {
+        return [this.x, this.y, this.width, this.height];
     }
 
     /**
