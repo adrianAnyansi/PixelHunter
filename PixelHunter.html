@@ -43,13 +43,20 @@
                 display: none;
             }
 
-            .image_viewer canvas.visible {
+            .image_viewer canvas.visible,
+            .image_viewer.color_mode canvas.compare {
                 display: inherit;
             }
 
             .image_viewer.color_mode canvas.image,
             .image_viewer.color_mode canvas.draw {
                 display:none;
+            }
+
+            .image_viewer canvas.compare {
+                display:none;
+                bottom: 0;
+                height: 50px;
             }
 
             .image_viewer_disclaimer {
@@ -108,6 +115,7 @@
                 <!-- This needs to be dynamically edited to allow for resolution -->
                 <div class="image_viewer_disclaimer">Drag image here</div>
                 <div class="color_plot"></div>
+                <canvas class="compare"></canvas>
             </div>
             <div class="image_tab_header">
                 <!-- <div>image_1</div> -->
@@ -127,6 +135,38 @@
                 <button id="rect_btn" disabled onclick="switchState(App.STATES.RECT)">RECT</button>
                 <button id="color_btn" disabled="" onclick="switchState(App.STATES.COLOR)">COLOR</button>
                 <button id="ident_btn" disabled=""  onclick="switchState(App.STATES.IDENT)">IDENT</button>
+                <div id="color_cube_control">
+                    <div>
+                        <input id="x_pos" name="x_pos" type="range" min="0" max="255">
+                        <label>X pos</label>
+                    </div>
+                    <div>
+                        <input id="y_pos" name="y_pos" type="range" min="0" max="255">
+                        <label>Y pos</label>
+                    </div>
+                    <div>
+                        <input id="z_pos" name="z_pos" type="range" min="0" max="255">
+                        <label for="z_pos">Z pos</label>
+                    </div>
+                    <p>---</p>
+                    <div>
+                        <input id="major_axis" type="range" min="0" max="255">
+                        <label for="major_axis">Major Axis</label>
+                    </div>
+                    <div>
+                        <input id="minor_axis" type="range" min="0" max="255">
+                        <label for="minor_axis">Minor Axis</label>
+                    </div>
+                    <p>---</p>
+                    <div>
+                        <input id="major_rotation" type="range" min="0" max="360">
+                        <label for="major_rotation">Major Rot</label>
+                    </div>
+                    <div>
+                        <input id="minor_rotation" type="range" min="0" max="360">
+                        <label for="minor_rotation">Minor Rot</label>
+                    </div>
+                </div>
             </div>
         </div>
     </body>

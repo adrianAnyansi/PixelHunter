@@ -5,17 +5,14 @@ Gonna start working on small things, so I can make some amount of progress towar
 
 # Today
 
-Rewrite the zindex system, just have different states
-also make an overall class so it's not dumb & brute force the images
-add overall state
+Start doing the cube controls and rotation stuff, do 3 axis + double rotation with sliders
+do updating as well
+Come back to binarization on canvas for checking output
+
 add zoom controls to rect to check stuff (change scale somehow?)
 finish rect controls + copy so I can use it for testing actually
-make sure to lock rect so I don't edit it by accident
 
-try web worker and grab the data from it for the color mode
 then if I have time, try updating that mode
-
-
 
 # Mode completion
 Overall design is split into separate parts to help with pixel hunter

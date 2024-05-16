@@ -61,8 +61,9 @@ function switchToColorMode() {
 
     // TODO: Defer this to worker
     // ColorThreshold.imgBuffer = currTabTracker.ctx.getImageData(...drawMonitor.queue[0].toArray())
-    ColorThreshold.registerRect(currTabTracker.ctx, drawMonitor.queue[0].toArray())
-    ColorThreshold.calcPixels()
+    WorkerMonitor.sendImgData(currTabTracker, drawMonitor.queue[0].toArray())
+    // ColorThreshold.registerRect(currTabTracker.ctx, drawMonitor.queue[0].toArray())
+    // ColorThreshold.calcPixels()
 }
 
 /** @type {ImageTab[]} Tracks images being shown (and binizaration/chart renders) */
@@ -105,7 +106,7 @@ const drawCanvas = document.createElement('canvas');
 drawCanvas.classList.add("draw")
 const drawCtx = drawCanvas.getContext('2d', {alpha: true}) // TODO: Update on resolution handler
 const drawMonitor = new DrawingMonitor(drawCanvas)
-drawMonitor.queue.push(new DrawableRectangle(5, 5, 100, 100))
+drawMonitor.queue.push(new DrawableRectangle(51, 160, 598, 139))
 imageViewerDiv.appendChild(drawCanvas);
 drawMonitor.register(imageViewerDiv)
 // setInterval(drawMonitor.drawPerFrame.bind(drawMonitor), 1000/30);
@@ -242,10 +243,105 @@ function swapToImage(tab_idx) {
     // ImageElTracker[tab_idx].header.classList.add('selected', true)
 }
 
+class WorkerMonitor {
+    static worker = new Worker("ColorGraph.js");
+    static plotDrawn = false;
+
+    /** chart data that's updated by worker */
+    static chart_test_data = {
+        name: "test_data",
+        type: "scatter3d",
+        mode: "markers",
+        // x: this.coord_x,
+        // y: this.coord_y,
+        // z: this.coord_z,
+        opacity: 1, // general opacity
+        marker: {
+            // size: this.coord_size,
+            // color: this.coord_c,
+            // outlinewidth: 10,
+            // outlinecolor: "black",
+            line: {
+                width: 0,
+            },
+            opacity: 1,
+            sizemode: "area" // diameter
+        }
+    };
+    
+    /** 3d scene Plotly options */
+    static threed_scene_options = {   
+        margin: { t: 0, l: 0, b: 50 },
+        scene: {
+            xaxis: {range: [0, 255], color: "red"}, 
+            yaxis: {range: [0, 255], color: "green"},
+            zaxis: {range: [0, 255], color: "blue"},
+            // plot_bgcolor: 'rgba(255,0,0,0)',
+            // paper_bgcolor: 'rgba(0,255,0,0)',
+            bgcolor: 'rgba(0,0,0,0)',
+        }    
+    }
+
+    static updateData (chart_data) {
+        this.chart_test_data.x = chart_data.x
+        this.chart_test_data.y = chart_data.y
+        this.chart_test_data.z = chart_data.z
+
+        this.chart_test_data.marker.size = chart_data.size
+        this.chart_test_data.marker.color = chart_data.color
+
+        WorkerMonitor.updateChart(false)
+    }
+
+    static updateChart(update=true) {
+        if (!this.plotDrawn) {
+            Plotly.newPlot(colorPlotEl, [this.chart_test_data], this.threed_scene_options)
+            this.plotDrawn = true
+        } else
+            Plotly.react(colorPlotEl, [this.chart_test_data], this.threed_scene_options)
+    }
+
+    // TODO: I might actually write my own charting library, this SVG solution is so
+    // goddamn
+    // slow
+
+    static handleMessage(event) {
+        const eventName = event.data.event
+        console.debug(`Main Event: ${eventName}`)
+
+        switch(eventName) {
+            case ColorEvent.PLOT_READY:
+                WorkerMonitor.updateData(event.data.chart)
+                break;
+            default:
+                console.debug(`Invalid Main Event: ${eventName}`)
+        }
+    }
+
+    static sendImgData (tabTracker, rect) {
+        const dataArray = tabTracker.ctx.getImageData(...rect).data.buffer
+        WorkerMonitor.worker.postMessage({ event: ColorEvent.REGISTER_DATA,
+            buffer: dataArray,
+            rect: rect},
+        [dataArray])
+    }
+
+    static sendCompareCanvas(canvas) {
+        const offCanvas = canvas.transferControlToOffscreen()
+        WorkerMonitor.worker.postMessage({event: ColorEvent.REGISTER_CANVAS, 
+            offCanvas: offCanvas
+            },
+        [offCanvas])
+    }
+}
 
 /** Pretend this is the IILE shit */
 function init () {
     
     switchState(App.STATES.RECT)
+
+    // Make worker & canvas
+    WorkerMonitor.sendCompareCanvas(document.querySelector('canvas.compare'))
+    WorkerMonitor.worker.onmessage = WorkerMonitor.handleMessage
 }
 init()
