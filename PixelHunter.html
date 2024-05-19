@@ -57,6 +57,13 @@
                 display:none;
                 bottom: 0;
                 height: 50px;
+                z-index: 20;
+            }
+
+            .image_viewer canvas.chart {
+                display: inherit;
+                height: 100%;
+                width: 100%;
             }
 
             .image_viewer_disclaimer {
@@ -115,6 +122,7 @@
                 <!-- This needs to be dynamically edited to allow for resolution -->
                 <div class="image_viewer_disclaimer">Drag image here</div>
                 <div class="color_plot"></div>
+                <canvas class="chart"></canvas>
                 <canvas class="compare"></canvas>
             </div>
             <div class="image_tab_header">
@@ -137,41 +145,57 @@
                 <button id="ident_btn" disabled=""  onclick="switchState(App.STATES.IDENT)">IDENT</button>
                 <div id="color_cube_control">
                     <div>
-                        <input id="x_pos" name="x_pos" type="range" min="0" max="255">
-                        <label>X pos</label>
+                        <input id="x_pos" name="x_pos" type="range" min="0" max="255" value="0">
+                        <div><label>X pos</label> <span class="value">0</span></div>
                     </div>
                     <div>
-                        <input id="y_pos" name="y_pos" type="range" min="0" max="255">
-                        <label>Y pos</label>
+                        <input id="y_pos" name="y_pos" type="range" min="0" max="255" value="0">
+                        <div><label>Y pos</label> <span class="value">0</span></div>
                     </div>
                     <div>
-                        <input id="z_pos" name="z_pos" type="range" min="0" max="255">
-                        <label for="z_pos">Z pos</label>
+                        <input id="z_pos" name="z_pos" type="range" min="0" max="255" value="0">
+                        <div><label>Z pos</label> <span class="value">0</span></div>
                     </div>
-                    <p>---</p>
+                    <br>---</br>
                     <div>
-                        <input id="major_axis" type="range" min="0" max="255">
-                        <label for="major_axis">Major Axis</label>
-                    </div>
-                    <div>
-                        <input id="minor_axis" type="range" min="0" max="255">
-                        <label for="minor_axis">Minor Axis</label>
-                    </div>
-                    <p>---</p>
-                    <div>
-                        <input id="major_rotation" type="range" min="0" max="360">
-                        <label for="major_rotation">Major Rot</label>
+                        <input id="length" type="range" min="0" max="255" value="0">
+                        <div><label for="length">Length</label><span>0</span></div>
                     </div>
                     <div>
-                        <input id="minor_rotation" type="range" min="0" max="360">
-                        <label for="minor_rotation">Minor Rot</label>
+                        <input id="width" type="range" min="0" max="255" value="0">
+                        <div><label for="width">Width</label><span>0</span></div>
+                    </div>
+                    <div>
+                        <input id="height" type="range" min="0" max="255" value="0">
+                        <div><label for="height">Height</label><span>0</span></div>
+                    </div>
+                    <br>---</br>
+                    <div>
+                        <input id="major_rotation" type="range" min="0" max="360" value="0">
+                        <div><label for="major_rotation">Major Rot</label><span>0</span></div>
+                    </div>
+                    <div>
+                        <input id="minor_rotation" type="range" min="0" max="360" value="0">
+                        <div><label for="minor_rotation">Minor Rot</label><span>0</span></div>
                     </div>
                 </div>
             </div>
         </div>
     </body>
-    <script src="https://cdn.plot.ly/plotly-2.32.0.min.js" charset="utf-8"></script>
-    <script type="text/javascript" src="ColorGraph.js"></script>
+    <!-- <script src="https://cdn.plot.ly/plotly-2.32.0.min.js" charset="utf-8"></script> -->
+    <script type="importmap">
+        {
+          "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js"
+          }
+        }
+    </script>
+    <!-- 
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/" -->
+    <!-- <script type="module">
+        import three from 'https://cdn.jsdelivr.net/npm/three@0.164.1/+esm'
+        </script> -->
+    <!-- <script type="module" src="ColorGraph.js"></script> -->
     <script type="text/javascript" src="DrawObjects.js"></script>
     <script type="text/javascript" src="pixelhunter.js"></script>
 </html>

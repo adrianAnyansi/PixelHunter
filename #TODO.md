@@ -1,9 +1,22 @@
 # Overall
 
-Plotly is mostly explored; I cant do much else there since the circles can't be scaled properly
-Gonna start working on small things, so I can make some amount of progress towards having a running program
+Moving to THREE.js (omg its so much better for my use-case excluding the text and being able to easily target points)
+
+Rotation
+3D hitbox logic
+once that is done, write the test for Rust vs Node
 
 # Today
+
+I need mouse rotation to properly debug the bounding box (and look at other stuff)
+Cube stuff is done, but not bounding
+Camera Rotation first, then binarization
+
+Ok new plan-
+Target is always the center of the plot
+get the polar coord and delta through them, and change those axes
+do smooth update later
+
 
 Start doing the cube controls and rotation stuff, do 3 axis + double rotation with sliders
 do updating as well

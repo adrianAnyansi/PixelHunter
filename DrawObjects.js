@@ -38,7 +38,7 @@ class DrawingMonitor {
         imageViewerDiv.addEventListener('mousemove', this.mouseMoveHandler.bind(this))
         imageViewerDiv.addEventListener('mouseup', this.mouseUpHandler.bind(this))
         imageViewerDiv.addEventListener('mousedown', this.mouseDownHandler.bind(this))
-        imageViewerDiv.addEventListener('mouseleave', this.mouseLeaveHandler.bind(this))
+        // imageViewerDiv.addEventListener('mouseleave', this.mouseLeaveHandler.bind(this))
 
         setInterval(drawMonitor.drawPerFrame.bind(drawMonitor), 1000/30);
     }

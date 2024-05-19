@@ -1,3 +1,13 @@
+// Copying
+class ColorEvent {
+    static REGISTER_CANVAS = 'REGISTER_CANVAS'
+    static REGISTER_DATA = 'REGISTER_DATA'
+
+    static PLOT_READY = "PLOT_READY"
+    static WHEEL_EVENT = "WHEEL_EVENT"
+    static MOUSE_EVENT = "MOUSE_EVENT"
+    static INPUT_EVENT = "INPUT_EVENT"
+}
 
 // First, build main system
 
@@ -28,6 +38,8 @@ function switchState(new_state) {
             // identStateBtn.disabled = false;
             break;
         case App.STATES.RECT:
+            // alert("Wait thats illegal")
+            // return
             rectStateBtn.disabled = true
             colorStateBtn.disabled = false;
             // identStateBtn.disabled = false;
@@ -244,7 +256,7 @@ function swapToImage(tab_idx) {
 }
 
 class WorkerMonitor {
-    static worker = new Worker("ColorGraph.js");
+    static worker = new Worker("ColorGraph.js", { type: "module" });
     static plotDrawn = false;
 
     /** chart data that's updated by worker */
@@ -311,7 +323,8 @@ class WorkerMonitor {
 
         switch(eventName) {
             case ColorEvent.PLOT_READY:
-                WorkerMonitor.updateData(event.data.chart)
+                // WorkerMonitor.updateData(event.data.chart)
+                console.debug("Threejs is drawing")
                 break;
             default:
                 console.debug(`Invalid Main Event: ${eventName}`)
@@ -326,13 +339,79 @@ class WorkerMonitor {
         [dataArray])
     }
 
-    static sendCompareCanvas(canvas) {
-        const offCanvas = canvas.transferControlToOffscreen()
-        WorkerMonitor.worker.postMessage({event: ColorEvent.REGISTER_CANVAS, 
-            offCanvas: offCanvas
-            },
-        [offCanvas])
+    static setupThreeCanvas(canvas) {
+
+        canvas.addEventListener("wheel", event => {
+            WorkerMonitor.worker.postMessage({
+                event: ColorEvent.WHEEL_EVENT,
+                wheelEvent: {deltaY: event.deltaY}
+            })
+        })
+
+        canvas.addEventListener("mousedown", event => {
+            WorkerMonitor.worker.postMessage({
+                event: ColorEvent.MOUSE_EVENT,
+                mouseEvent: {
+                    leftBtnDown: event.button === 0,
+                    down: true,
+                    point: {
+                        x: event.offsetX,
+                        y: event.offsetY
+                    }
+                }
+            })
+        })
+        canvas.addEventListener("mouseup", event => {
+            WorkerMonitor.worker.postMessage({
+                event: ColorEvent.MOUSE_EVENT,
+                mouseEvent: {
+                    up: true
+                }
+            })
+        })
+
+        canvas.addEventListener("mousemove", event => {
+            WorkerMonitor.worker.postMessage({
+                event: ColorEvent.MOUSE_EVENT,
+                mouseEvent: {
+                    leftBtnDown: event.button === 0,
+                    point: {
+                        x: event.offsetX,
+                        y: event.offsetY
+                    }
+                }
+            })
+        })
+
     }
+
+    static sendCompareCanvas(canvas, chartCanvas) {
+        const offCanvas = canvas.transferControlToOffscreen()
+        
+        chartCanvas.width = imageViewerDiv.clientWidth;
+        chartCanvas.height = imageViewerDiv.clientHeight;
+        const chartOffCanvas = chartCanvas.transferControlToOffscreen()
+            WorkerMonitor.setupThreeCanvas(chartCanvas)
+
+        WorkerMonitor.worker.postMessage({event: ColorEvent.REGISTER_CANVAS, 
+            offCanvas: offCanvas,
+            graphCanvas: chartOffCanvas
+            },
+        [offCanvas, chartOffCanvas])
+    }
+
+    static handleCubeControl () {
+        //TODO reject if not color mode (dont even show)
+        document.getElementById("color_cube_control").addEventListener("input", event => {
+            WorkerMonitor.worker.postMessage({
+                event: ColorEvent.INPUT_EVENT,
+                targetName: event.target.id,
+                value: event.target.value
+            })
+            event.target.parentElement.querySelector('span').textContent = event.target.value
+        })
+    }
+
 }
 
 /** Pretend this is the IILE shit */
@@ -340,8 +419,25 @@ function init () {
     
     switchState(App.STATES.RECT)
 
+    
+    drawCanvas.width = imageViewerDiv.clientWidth
+    drawCanvas.height = imageViewerDiv.clientHeight
+    drawCanvas.style.display = 'none'
+
+    WorkerMonitor.handleCubeControl()
+
     // Make worker & canvas
-    WorkerMonitor.sendCompareCanvas(document.querySelector('canvas.compare'))
     WorkerMonitor.worker.onmessage = WorkerMonitor.handleMessage
+    WorkerMonitor.sendCompareCanvas(
+        document.querySelector('canvas.compare'),
+        document.querySelector('canvas.chart'),)
+
+    
+    document.getElementById('height').value = 100;
+    document.getElementById('height').dispatchEvent(new InputEvent('input', {'bubbles': true}))
+    document.getElementById('width').setAttribute("value", 10)
+    document.getElementById('width').dispatchEvent(new InputEvent('input', {'bubbles': true}))
+    document.getElementById('length').setAttribute("value", 100)
+    document.getElementById('length').dispatchEvent(new InputEvent('input', {'bubbles': true}))
 }
 init()
