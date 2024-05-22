@@ -34,6 +34,8 @@ class ColorThreshold {
     
     /** Get RGB color from imgData */
     static getRGBFromImgData(index) {
+        // return this.imgData.data.slice(index, index+3)
+        // This is faster, dont ask why
         return [
             this.imgData.data[index+0],
             this.imgData.data[index+1],
@@ -62,6 +64,9 @@ class ColorThreshold {
     static renderFlag = null;
     static boundBox = null;
 
+    /** Sets up renderer, camera and scene.
+     * Additionally sets up axis & testing objects, then renders
+     */
     static initThrees(offCanvas) {
         // console.debug(offCanvas)
         this.renderer = new THREE.WebGLRenderer({antialias: true, canvas: offCanvas});
@@ -89,9 +94,10 @@ class ColorThreshold {
         this.renderOnRequestFrame()
     }
 
+    /** Add scene, light and bounding box
+     * Does not render the scene
+     */
     static addThreeAxis() {
-        // const material = new THREE.LineBasicMaterial( { color: 0x0000ff } );
-
         const origin = new THREE.Vector3( 0, 0, 0 );
         const x_points = [origin, new THREE.Vector3( 255, 0, 0 )]
         const y_points = [origin, new THREE.Vector3( 0, 255, 0 )]
@@ -113,8 +119,6 @@ class ColorThreshold {
         this.scene.add(light);
 
         this.addBoundingWireframeBox()
-
-        // this.renderer.render(this.scene, this.camera);
     }
 
     static box() {
@@ -201,7 +205,7 @@ class ColorThreshold {
         return cube
     }
 
-    static animating = false;
+    static drawingNextFrame = false;
 
     static renderThreeJS() {
         if (this.renderFlag !== null)
@@ -211,9 +215,9 @@ class ColorThreshold {
     }
 
     static renderOnRequestFrame() {
-        if (!this.animating) {
+        if (!this.drawingNextFrame) {
             requestAnimationFrame(this.renderThreeJS.bind(this));
-            this.animating = true
+            this.drawingNextFrame = true
         }
         this.renderFlag = true
     }
@@ -223,12 +227,13 @@ class ColorThreshold {
     static mouseOrigin = null;
 
     static rotateCamera(x,y) {
-        this.cameraSph.setFromVector3(this.camera.position);
+        this.cameraSph.setFromVector3(this.camera.position.sub(this.rotatePoint));
 
         this.cameraSph.theta += x * this.x_scaling;
         this.cameraSph.phi += y * this.y_scaling;
 
         this.camera.position.setFromSpherical(this.cameraSph);
+        this.camera.position.add(this.rotatePoint)
         this.camera.lookAt(this.rotatePoint);
         this.renderOnRequestFrame()
     }
@@ -292,30 +297,18 @@ class ColorThreshold {
 
         ColorThreshold.colorToPixel.clear();
 
-        // for (const cube of this.cubeRef) {
-        //     if (cube.geometry !== this.defaultCubeGeometry)
-        //         cube.geometry.dispose();
-        //     cube.material.dispose();
-        // }
+        this.clearScene();
 
-        // this.cubeRef.length = 0;
-        this.scene.clear();
+        // rebuild scene
         this.addThreeAxis();
-        // this.clearCoords();
-        // this.calcPixels();
-        // this.calcPixelsNEW();
+    }
+
+    static clearScene() {
+        this.scene.clear();
+        // if (this.boundBox)
+        //      this.boundBox.dispose()
     }
     
-
-    static clearCoords () {
-        this.coord_x = [];
-        this.coord_y = [];
-        this.coord_z = [];
-
-        // size, color
-        this.coord_size = [];
-        // this.coord_c = [];
-    }
 
     /** Calculate all pixel colours within this rect */
     static calcPixels() {
@@ -370,8 +363,6 @@ class ColorThreshold {
             const arr = this.colorToPixel.get(rgb) ?? []
             if (arr.length == 0) {
                 this.colorToPixel.set(rgb, arr);
-                // const cube = this.addCube(rgb, this.getRGBFromArray(rgb)) // add unit
-                // this.cubeRef.push(cube)
             }
             arr.push(i);
         }
@@ -414,6 +405,7 @@ class ColorThreshold {
             currScale.setComponent(index, val)
             // console.log("not impl")
         };
+        // TODO: Set quaternion instead??
         const rotFunc = (index, val) => {
             const euler = this.boundBox.rotation
             if (index == 0)
@@ -437,6 +429,67 @@ class ColorThreshold {
             propFunc[event.targetName](parseFloat(event.value))
         }
         this.renderOnRequestFrame()
+
+        this.countPixels()  // trigger countPxs
+        this.countPixelId++
+    }
+
+    // static rot_matrix = new THREE.Matrix4();
+    static countPixelId = 0;
+
+    /** Turn all cubes within the box to negative colour
+     *  Then colour the 2nd compare canvas with the negatives
+     */
+    static countPixels(input_type) {
+        if (!ColorThreshold.imgData) return; // throw error or smth
+        
+        const c_point = this.boundBox.position
+        const vol = this.boundBox.scale
+        const currCheck = this.countPixelId
+        
+        const pos_obj = new THREE.Vector3();
+
+        // Defer the copy until calculation is done?
+        let changedPx = 0;
+        // new Uint8ClampedArray(this.imgData.data)
+        const copyImgData = new ImageData( 
+            this.imgData.width, this.imgData.height)
+        
+        const s_ts = performance.now();
+
+        // Take all pixels in the list and put in Set
+        for (const [rgb, arr] of this.colorToPixel) {
+            if (currCheck != this.countPixelId) {
+                console.debug("Interrupt detected!")
+                return
+            }
+
+            // Hope this isnt slow
+            pos_obj.set(...rgb);
+            pos_obj.sub(this.boundBox.position);
+            pos_obj.applyQuaternion(this.boundBox.quaternion);
+
+            if (pos_obj.x > -vol.x/2 &&
+                pos_obj.x < +vol.x/2 &&
+                pos_obj.y > -vol.y/2 &&
+                pos_obj.y < +vol.y/2 &&
+                pos_obj.z > -vol.z/2 &&
+                pos_obj.z < +vol.z/2) {
+                    // Set pixel to negative of thing
+                    // const i_rgb = rgb.map(px => 255-px);
+                    changedPx += arr.length;
+
+                    for (let idx of arr) {
+                        copyImgData.data.set([...rgb, 255], idx);
+                    }
+            }
+        }
+
+        const context = ColorThreshold.compareCanvas.getContext('2d')
+        context.putImageData(copyImgData, this.imgData.width, 0)
+
+        const time_taken = performance.now() - s_ts;
+        console.debug(`Pixel Binarization in ${time_taken}ms`)
     }
 
 }

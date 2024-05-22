@@ -113,15 +113,15 @@ class DrawingMonitor {
                 drawRect = new DrawableRectangle(
                     this.pointer_origin.x, 
                     this.pointer_origin.y,
-                    0,0)
+                    1,1)
                 this.queue.push()
             } else {
                 drawRect = this.queue[0]
             }
             
             // update drawRect bounds
-            drawRect.width = mouseEvent.offsetX - this.pointer_origin.x
-            drawRect.height = mouseEvent.offsetY - this.pointer_origin.y
+            drawRect.width = mouseEvent.offsetX - this.pointer_origin.x;
+            drawRect.height = mouseEvent.offsetY - this.pointer_origin.y;
 
             rectCoordDisplayEl.textContent = drawRect.toString()
         }
@@ -138,7 +138,7 @@ class DrawableRectangle {
         this.width = parseInt(w, 10)
         this.height = parseInt(h, 10)
 
-        this.flic
+        // this.flic
     }
 
     /**
@@ -163,6 +163,19 @@ class DrawableRectangle {
 
     toArray() {
         return [this.x, this.y, this.width, this.height];
+    }
+    toNormArray() {
+        let [x,y,w,h] = [...this.toArray()]
+        
+        if (w < 0) {
+            x += w
+            w *= -1
+        }
+        if (h < 0) {
+            y -= h
+            h *= -1
+        }
+        return [x,y,w,h];
     }
 
     /**

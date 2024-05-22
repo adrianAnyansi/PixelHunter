@@ -44,20 +44,24 @@
             }
 
             .image_viewer canvas.visible,
-            .image_viewer.color_mode canvas.compare {
+            .color_mode canvas.compare {
                 display: inherit;
             }
 
-            .image_viewer.color_mode canvas.image,
-            .image_viewer.color_mode canvas.draw {
+            .color_mode canvas.image,
+            .color_mode canvas.draw {
                 display:none;
             }
 
-            .image_viewer canvas.compare {
+            canvas.compare {
                 display:none;
                 bottom: 0;
-                height: 50px;
+                /* height: 50px; */
                 z-index: 20;
+            }
+
+            .color_mode canvas.compare {
+                display: inherit;
             }
 
             .image_viewer canvas.chart {
@@ -123,19 +127,19 @@
                 <div class="image_viewer_disclaimer">Drag image here</div>
                 <div class="color_plot"></div>
                 <canvas class="chart"></canvas>
-                <canvas class="compare"></canvas>
             </div>
             <div class="image_tab_header">
                 <!-- <div>image_1</div> -->
             </div>
+            <canvas class="compare"></canvas>
             <div class="image_info">
                 <p class="visible_debug"></p>
                 <p>Mouse:<span class="mouse_pos">(0,0)</span></p>
                 <p>Zoom:<span class="zoom_value">100%</span></p>
-            </div>
-            <div class="rect_info">
                 <p>Rect: <span class="rect_coords"></span></p>
+                <p>Box: <span class="box_info"></span></p>
             </div>
+            
 
             <div class="controls">
                 <p>Title: Pixel Hunter</p>
@@ -171,11 +175,11 @@
                     </div>
                     <br>---</br>
                     <div>
-                        <input id="major_rotation" type="range" min="0" max="360" value="0">
+                        <input id="major_rotation" type="range" min="0" max="180" value="0">
                         <div><label for="major_rotation">Major Rot</label><span>0</span></div>
                     </div>
                     <div>
-                        <input id="minor_rotation" type="range" min="0" max="360" value="0">
+                        <input id="minor_rotation" type="range" min="0" max="180" value="0">
                         <div><label for="minor_rotation">Minor Rot</label><span>0</span></div>
                     </div>
                 </div>

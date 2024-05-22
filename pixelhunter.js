@@ -69,11 +69,11 @@ function switchToColorMode() {
 
     // Show plotly canvas/div on top
     colorPlotEl.classList.add('visible')
-    imageViewerDiv.classList.add('color_mode')
+    appFrameDiv.classList.add('color_mode')
 
     // TODO: Defer this to worker
     // ColorThreshold.imgBuffer = currTabTracker.ctx.getImageData(...drawMonitor.queue[0].toArray())
-    WorkerMonitor.sendImgData(currTabTracker, drawMonitor.queue[0].toArray())
+    WorkerMonitor.sendImgData(currTabTracker, drawMonitor.queue[0].toNormArray())
     // ColorThreshold.registerRect(currTabTracker.ctx, drawMonitor.queue[0].toArray())
     // ColorThreshold.calcPixels()
 }
@@ -97,6 +97,8 @@ class ImageTab {
     }
 }
 
+const appFrameDiv = document.querySelector('.app_frame')
+
 // Setup image drag-n-drop
 const imageViewerDiv = document.querySelector('.image_viewer')
 imageViewerDiv.addEventListener('drop', imageDropHandler);
@@ -118,7 +120,7 @@ const drawCanvas = document.createElement('canvas');
 drawCanvas.classList.add("draw")
 const drawCtx = drawCanvas.getContext('2d', {alpha: true}) // TODO: Update on resolution handler
 const drawMonitor = new DrawingMonitor(drawCanvas)
-drawMonitor.queue.push(new DrawableRectangle(51, 160, 598, 139))
+// drawMonitor.queue.push(new DrawableRectangle(51, 160, 598, 139))
 imageViewerDiv.appendChild(drawCanvas);
 drawMonitor.register(imageViewerDiv)
 // setInterval(drawMonitor.drawPerFrame.bind(drawMonitor), 1000/30);
@@ -346,6 +348,7 @@ class WorkerMonitor {
                 event: ColorEvent.WHEEL_EVENT,
                 wheelEvent: {deltaY: event.deltaY}
             })
+            event.preventDefault()
         })
 
         canvas.addEventListener("mousedown", event => {
@@ -400,7 +403,7 @@ class WorkerMonitor {
         [offCanvas, chartOffCanvas])
     }
 
-    static handleCubeControl () {
+    static registerCubeControls () {
         //TODO reject if not color mode (dont even show)
         document.getElementById("color_cube_control").addEventListener("input", event => {
             WorkerMonitor.worker.postMessage({
@@ -412,26 +415,33 @@ class WorkerMonitor {
         })
     }
 
+    // TODO: Add wheel event on all ranges for 1/10 ticks per wheel
+
 }
 
 /** Pretend this is the IILE shit */
 function init () {
-    
+    // On DOM load
     switchState(App.STATES.RECT)
-
     
     drawCanvas.width = imageViewerDiv.clientWidth
     drawCanvas.height = imageViewerDiv.clientHeight
-    drawCanvas.style.display = 'none'
+    // drawCanvas.style.display = 'none'
 
-    WorkerMonitor.handleCubeControl()
+    // TODO: Make a quick COLOR mode function for testing
+
+    WorkerMonitor.registerCubeControls()
+    drawMonitor.queue.push(new DrawableRectangle(...[1550, 157, -301, 535]))
 
     // Make worker & canvas
     WorkerMonitor.worker.onmessage = WorkerMonitor.handleMessage
     WorkerMonitor.sendCompareCanvas(
         document.querySelector('canvas.compare'),
-        document.querySelector('canvas.chart'),)
+        document.querySelector('canvas.chart'))
 
+    // TODO: Add shared array for interrupt flag with Worker
+    // const flagObj = new SharedArrayBuffer(8);
+    // WorkerMonitor.sendCubeSharedBuffer({event: "flag", sharedFlag: flagObj}, flagObj)
     
     document.getElementById('height').value = 100;
     document.getElementById('height').dispatchEvent(new InputEvent('input', {'bubbles': true}))

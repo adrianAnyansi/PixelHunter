@@ -8,24 +8,18 @@ once that is done, write the test for Rust vs Node
 
 # Today
 
-I need mouse rotation to properly debug the bounding box (and look at other stuff)
-Cube stuff is done, but not bounding
-Camera Rotation first, then binarization
+Ok, so I have to make this work
 
-Ok new plan-
-Target is always the center of the plot
-get the polar coord and delta through them, and change those axes
-do smooth update later
+Every input change must start the thing
+Interrupt if currently changed with a boolFlag
+When complete, do the array change (makes sense to have a second map instead of checking 
+the hash twice)
+Then do the binarization on the thing
+Also yeah prob timeout by 1s, if it takes about 2s to complete, then it should be fine, this is a 1 computer implementation
 
+If thats done by today, I can get a read on the final output and then start on Rust impl
+Also move the compareCanvas
 
-Start doing the cube controls and rotation stuff, do 3 axis + double rotation with sliders
-do updating as well
-Come back to binarization on canvas for checking output
-
-add zoom controls to rect to check stuff (change scale somehow?)
-finish rect controls + copy so I can use it for testing actually
-
-then if I have time, try updating that mode
 
 # Mode completion
 Overall design is split into separate parts to help with pixel hunter
