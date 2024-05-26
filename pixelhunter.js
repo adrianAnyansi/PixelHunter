@@ -405,13 +405,41 @@ class WorkerMonitor {
 
     static registerCubeControls () {
         //TODO reject if not color mode (dont even show)
-        document.getElementById("color_cube_control").addEventListener("input", event => {
+
+        const cubeControls = document.getElementById("color_cube_control");
+
+        
+        const changeFunc = event => {
             WorkerMonitor.worker.postMessage({
                 event: ColorEvent.INPUT_EVENT,
                 targetName: event.target.id,
                 value: event.target.value
             })
             event.target.parentElement.querySelector('span').textContent = event.target.value
+        }
+
+        
+        cubeControls.addEventListener("input", changeFunc);
+
+        cubeControls.addEventListener('wheel', event => {
+            if (event.target.nodeName != "INPUT")
+                return
+            // TODO: Get the div and then search for input, so I can use the label
+
+            const isShift = event.getModifierState("Shift");
+            const isCtrl = event.getModifierState("Control")
+            let currVal = parseInt(event.target.value)
+
+            let modifier = 1 * (isShift ? 10 : 1) * (isCtrl ? 5 : 1)
+
+            if (event.deltaY > 0) {
+                event.target.value = currVal - modifier;
+            } else if (event.deltaY < 0) {
+                event.target.value = currVal + modifier;
+            }
+            // need to trigger an input event
+            event.target.dispatchEvent(new Event('input', {bubbles: true}))
+            event.preventDefault()
         })
     }
 
@@ -428,7 +456,7 @@ function init () {
     drawCanvas.height = imageViewerDiv.clientHeight
     // drawCanvas.style.display = 'none'
 
-    // TODO: Make a quick COLOR mode function for testing
+    // TODO: Make a quick COLOR mode function for testing graph stuff
 
     WorkerMonitor.registerCubeControls()
     drawMonitor.queue.push(new DrawableRectangle(...[1550, 157, -301, 535]))

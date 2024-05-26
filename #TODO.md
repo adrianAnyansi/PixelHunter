@@ -1,24 +1,66 @@
 # Overall
 
-Moving to THREE.js (omg its so much better for my use-case excluding the text and being able to easily target points)
+Make rotations and translations easier to do
+    Maybe rewrite that logic so I can treat it like a pixel thingy
+    Fix the wheel event so it's easier to use, bigger hitbox for accidents
+    show direction of change when hovered
 
-Rotation
-3D hitbox logic
+Create the picker for compare canvas
+    Show what pixel goes to cube map
+
+Inversely, show the captured pixels within the cube... somehow (instancing is kinda weird)
+
+Make controls for rect so I can update the server
+
+interrupts so the box is real-time again
+
 once that is done, write the test for Rust vs Node
 
 # Today
+output the box to clipboard
 
-Ok, so I have to make this work
+after that, then I do the rust comparison.
+Here's the thing: This requires a rewrite of the name grabber system, and it's quite... intensive.
+I think that will take probably another week depending on how I program that particular implementation solution and test it, which isn't the point of the test.
 
-Every input change must start the thing
-Interrupt if currently changed with a boolFlag
-When complete, do the array change (makes sense to have a second map instead of checking 
-the hash twice)
-Then do the binarization on the thing
-Also yeah prob timeout by 1s, if it takes about 2s to complete, then it should be fine, this is a 1 computer implementation
+Simply doing an iteration of pixel counting did not work, it had similar time; I assume this is because sharp has some C++ base, so it's likely that the main culprit will be in
+1. Looping by during flood-fill to find other pixels
+2. Doing matrix transformations (which isn't used currently, but WILL be a huge issue)
 
-If thats done by today, I can get a read on the final output and then start on Rust impl
-Also move the compareCanvas
+Here's exactly the process for making a binarized image
+getImage
+make a copy of the image buffer, normalized to white 255 alpha
+Go down from each username start, from right to left
+check if pixel is in the color range, then do flood-fill
+then continue
+finally, write buffer to file (png)
+
+I'll try the matrix stuff first
+
+...
+Ok maybe my stomach hurts or this is just heresy but-
+what if... the performance gain isnt THAT much? 
+I'm assuming at least x4 but eh I dont even need numbers, I can just write the code with random digits
+LETS DO THAT!
+
+
+### Update
+So barb did another marbles and- I'm realizing 2 things
+1- While pixel hunter exists to eventually work on the League auto mini-map, I'm not super stoked about it
+    I'm far more interested in working on Project Hoard, so Im not motivated
+2- I need to treat this as a *live* project, where downtime matters; if I spend ages working on a solution and ditch it, I've just gotten nothing out of the project
+3- I'm looking more into OpenCV, trying to see if it does a similar thing to what Im looking for
+    I dont think it does
+
+But the plan today is simply, doing the Rust test.
+Thats all I wanna do rn, then play some games I think
+
+
+## Other
+Did some research on interrupting-
+most likely to use a AbortController for async
+or Atomics which is basically a shared memory thing;
+both are pretty indepth and I don't really need it unless I want to improve the tool later on
 
 
 # Mode completion

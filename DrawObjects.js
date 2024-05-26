@@ -54,12 +54,22 @@ class DrawingMonitor {
         if (App.state === App.STATES.RECT && mouseEvent.button == 0) {
             // console.log("mouse down")
             DrawingMonitor.POINTER_DOWN = true
-            this.pointer_origin = new Point(mouseEvent.offsetX, mouseEvent.offsetY)
-            // Remove hard coded
-            this.queue[0].x = mouseEvent.offsetX
-            this.queue[0].y = mouseEvent.offsetY
-            this.queue[0].width = 1
-            this.queue[0].height = 1
+            // NOTE: Dont update origin if shift held
+            const isShift = mouseEvent.getModifierState('Shift')
+
+            // TODO: Clean-up update rect code, prevent negatives
+            if (isShift) {
+                this.pointer_origin = new Point(this.queue[0].x, this.queue[0].y);
+                this.queue[0].width = mouseEvent.offsetX - this.queue[0].x
+                this.queue[0].height = mouseEvent.offsetY - this.queue[0].y
+            } else {
+                this.pointer_origin = new Point(mouseEvent.offsetX, mouseEvent.offsetY)
+                // Remove hard coded
+                this.queue[0].x = mouseEvent.offsetX
+                this.queue[0].y = mouseEvent.offsetY
+                this.queue[0].width = 1
+                this.queue[0].height = 1
+            }
 
             rectCoordDisplayEl.textContent = this.queue[0].toString()
             // console.log(`set ${this.pointer_origin}`)

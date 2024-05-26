@@ -410,9 +410,11 @@ class ColorThreshold {
             const euler = this.boundBox.rotation
             if (index == 0)
                 euler.x = val * degToRad
-            else
+            else if (index == 1)
                 euler.y = val * degToRad
-            }
+            else
+                euler.z = val * degToRad
+        };
         
         const propFunc = {
             'x_pos': posFunc.bind(this, 0),
@@ -421,8 +423,9 @@ class ColorThreshold {
             'length': boundFunc.bind(this, 0),
             'width': boundFunc.bind(this, 1),
             'height': boundFunc.bind(this, 2),
-            'major_rotation': rotFunc.bind(this, 0),
-            'minor_rotation': rotFunc.bind(this, 1)
+            'x_rot': rotFunc.bind(this, 0),
+            'y_rot': rotFunc.bind(this, 1),
+            'z_rot': rotFunc.bind(this, 2)
         }
 
         if (propFunc[event.targetName]) {
