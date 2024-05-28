@@ -1,6 +1,7 @@
 <html>
     <head>
         <title>Pixel Hunter</title>
+        
         <style>
 
             body {
@@ -12,6 +13,7 @@
                 /* flex-direction: row; */
                 grid-template-columns: 1fr 0fr;
                 grid-template-rows: 1fr 0fr;
+                gap: 5px;
             }
 
             .app_frame * {
@@ -29,9 +31,10 @@
                 width: 100%;
                 height: 100%;
                 overflow: scroll;
+                scrollbar-width: none;
                 position: relative;
                 padding: 0;
-                margin: 5px;
+                /* margin: 5px; */
             }
 
             .image_viewer * {
@@ -57,7 +60,8 @@
                 display:none;
                 bottom: 0;
                 /* height: 50px; */
-                z-index: 20;
+                /* z-index: 20; */
+                max-width: 100%;
             }
 
             .color_mode canvas.compare {
@@ -102,11 +106,6 @@
                 background-color:rgb(68, 180, 218)
             }
 
-            .color_plot {
-                height: 100%;
-                width: 100%;
-            }
-
             .controls {
                 grid-column: 2;
                 grid-row: 1/10;
@@ -121,6 +120,10 @@
             input[type="range"] {
                 padding: 0;
             }
+
+            .scroller input {
+                width: 100%;
+            }
         </style>
     </head>
     <body>
@@ -129,7 +132,6 @@
                 <!-- <img src="media/Untitled.dib"> -->
                 <!-- This needs to be dynamically edited to allow for resolution -->
                 <div class="image_viewer_disclaimer">Drag image here</div>
-                <div class="color_plot"></div>
                 <canvas class="chart"></canvas>
             </div>
             <div class="image_tab_header">
@@ -152,41 +154,41 @@
                 <button id="color_btn" disabled="" onclick="switchState(App.STATES.COLOR)">COLOR</button>
                 <button id="ident_btn" disabled=""  onclick="switchState(App.STATES.IDENT)">IDENT</button>
                 <div id="color_cube_control">
-                    <div>
+                    <div class="scroller">
                         <input id="x_pos" name="x_pos" type="range" min="0" max="255" value="0">
                         <div><label>X pos</label> <span class="value">0</span></div>
                     </div>
-                    <div>
+                    <div class="scroller">
                         <input id="y_pos" name="y_pos" type="range" min="0" max="255" value="0">
                         <div><label>Y pos</label> <span class="value">0</span></div>
                     </div>
-                    <div>
+                    <div class="scroller">
                         <input id="z_pos" name="z_pos" type="range" min="0" max="255" value="0">
                         <div><label>Z pos</label> <span class="value">0</span></div>
                     </div>
                     <span>---</span>
-                    <div>
+                    <div class="scroller">
                         <input id="length" type="range" min="0" max="255" value="0">
                         <div><label for="length">Length</label><span>0</span></div>
                     </div>
-                    <div>
+                    <div class="scroller">
                         <input id="width" type="range" min="0" max="255" value="0">
                         <div><label for="width">Width</label><span>0</span></div>
                     </div>
-                    <div>
+                    <div class="scroller">
                         <input id="height" type="range" min="0" max="255" value="0">
                         <div><label for="height">Height</label><span>0</span></div>
                     </div>
                     <span>---</span>
-                    <div>
+                    <div class="scroller">
                         <input id="x_rot" type="range" min="-180" max="180" value="0">
                         <div><label for="x_rot">X Rot</label><span>0</span></div>
                     </div>
-                    <div>
+                    <div class="scroller">
                         <input id="y_rot" type="range" min="-180" max="180" value="0">
                         <div><label for="y_rot">Y Rot</label><span>0</span></div>
                     </div>
-                    <div>
+                    <div class="scroller">
                         <input id="z_rot" type="range" min="-180" max="180" value="0">
                         <div><label for="z_rot">Z Rot</label><span>0</span></div>
                     </div>

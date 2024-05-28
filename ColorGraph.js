@@ -1,10 +1,8 @@
 // Gonna put the 3D plot stuff here probably
-// console.log("pre-calc")
-
 
 // import * as THREE from 'three';
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.124/build/three.module.js';
-// import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+
 
 class ColorEvent {
     static REGISTER_CANVAS = 'REGISTER_CANVAS'
@@ -14,6 +12,7 @@ class ColorEvent {
     static WHEEL_EVENT = "WHEEL_EVENT"
     static MOUSE_EVENT = "MOUSE_EVENT"
     static INPUT_EVENT = "INPUT_EVENT"
+    static FLAG = 'flag'
 }
 
 /** This is the object that compares the thresholds and displays the 3D plot
@@ -61,7 +60,6 @@ class ColorThreshold {
 
     static defaultCubeGeometry = new THREE.BoxGeometry(1, 1, 1);
     // static cubeRef = [];
-    static renderFlag = null;
     static boundBox = null;
 
     /** Sets up renderer, camera and scene.
@@ -172,18 +170,20 @@ class ColorThreshold {
     }
 
     static addBoundingWireframeBox() {
-        const boxGeometry = new THREE.BoxGeometry(1, 1, 1);
-        const wireframe = new THREE.WireframeGeometry(boxGeometry);
+        if (!this.boundBox) {
+            const boxGeometry = new THREE.BoxGeometry(1, 1, 1);
+            const wireframe = new THREE.WireframeGeometry(boxGeometry);
 
-        // TODO: MAKE ONLY EDGES
-        const boxLines = new THREE.LineSegments( this.box(), new THREE.LineDashedMaterial( { dashSize: 100, gapSize: 50 } ) );
-        boxLines.material.depthTest = false;
-        boxLines.material.opacity = 0.25;
-        boxLines.material.transparent = true;
+            // TODO: MAKE ONLY EDGES
+            const boxLines = new THREE.LineSegments( this.box(), new THREE.LineDashedMaterial( { dashSize: 100, gapSize: 50 } ) );
+            boxLines.material.depthTest = false;
+            boxLines.material.opacity = 0.25;
+            boxLines.material.transparent = true;
 
-        this.boundBox = boxLines;
+            this.boundBox = boxLines;
+        }
 
-        this.scene.add(boxLines)
+        this.scene.add(this.boundBox)
     }
 
     static addCube (position, color=0xffffff, width=1, height=1, depth=1) {
@@ -205,21 +205,26 @@ class ColorThreshold {
         return cube
     }
 
-    static drawingNextFrame = false;
+    static drawingNextFrame = false; // a frame needs to be drawn
+    static renderFlag = null; // I cant remember why I had this
 
     static renderThreeJS() {
-        if (this.renderFlag !== null)
+        if (this.drawingNextFrame !== null) {
             this.renderer.render(this.scene, this.camera);
-        this.renderFlag = null;
-        requestAnimationFrame(this.renderThreeJS.bind(this));
+            // console.debug("rendered")
+        }
+        this.drawingNextFrame = false;
+        // this.renderFlag = null;
+        // requestAnimationFrame(this.renderThreeJS.bind(this));
     }
 
     static renderOnRequestFrame() {
         if (!this.drawingNextFrame) {
             requestAnimationFrame(this.renderThreeJS.bind(this));
+            // console.debug("render queue")
             this.drawingNextFrame = true
         }
-        this.renderFlag = true
+        // this.renderFlag = true
     }
 
     static x_scaling = 0.001;
@@ -254,7 +259,9 @@ class ColorThreshold {
         }
 
         // if origin is set, rotate
+        // TODO: If not selected, choose current position
         if (this.mouseOrigin !== null) {
+            
             const phi_diff = this.mouseOrigin.x - mouseEvent.point.x
             const theta_diff = this.mouseOrigin.y - mouseEvent.point.y
 
@@ -265,8 +272,9 @@ class ColorThreshold {
     }
 
     /** Zoom controls */
+    static zoomScaling = -10;
     static wheelEvent(event) {
-        const scaling = event.deltaY / -20;
+        const scaling = event.deltaY / this.zoomScaling;
         const vec = new THREE.Vector3(0,0,0)
         const worldDir = this.camera.getWorldDirection(vec)
         this.camera.position.add(worldDir.multiplyScalar(scaling))
@@ -301,6 +309,11 @@ class ColorThreshold {
 
         // rebuild scene
         this.addThreeAxis();
+    }
+
+    static pixelCountFlag = null;
+    static registerFlag(sharedBuffer) {
+        this.pixelCountFlag = sharedBuffer;
     }
 
     static clearScene() {
@@ -396,7 +409,7 @@ class ColorThreshold {
     }
 
     static handleCubeInput(event) {
-
+        // console.debug("Handling cube input event")
         const degToRad = Math.PI / 180;
 
         const posFunc = (index, val) => {this.boundBox.position.setComponent(index, val)}
@@ -405,7 +418,7 @@ class ColorThreshold {
             currScale.setComponent(index, val)
             // console.log("not impl")
         };
-        // TODO: Set quaternion instead??
+
         const rotFunc = (index, val) => {
             const euler = this.boundBox.rotation
             if (index == 0)
@@ -434,11 +447,8 @@ class ColorThreshold {
         this.renderOnRequestFrame()
 
         this.countPixels()  // trigger countPxs
-        this.countPixelId++
     }
 
-    // static rot_matrix = new THREE.Matrix4();
-    static countPixelId = 0;
 
     /** Turn all cubes within the box to negative colour
      *  Then colour the 2nd compare canvas with the negatives
@@ -448,7 +458,15 @@ class ColorThreshold {
         
         const c_point = this.boundBox.position
         const vol = this.boundBox.scale
-        const currCheck = this.countPixelId
+
+        const hasInterrupt = this.pixelCountFlag !== null;
+        let dataView = null;
+        let processingFlag = null;
+        if (hasInterrupt) {
+            dataView = new DataView(this.pixelCountFlag, 0)
+            processingFlag = dataView.getUint8(0)
+            console.debug(`Counting with flag ${processingFlag}`)
+        }
         
         const pos_obj = new THREE.Vector3();
 
@@ -459,11 +477,16 @@ class ColorThreshold {
             this.imgData.width, this.imgData.height)
         
         const s_ts = performance.now();
+        const break_px_check = 100;
+        let px_iter = 0;
 
         // Take all pixels in the list and put in Set
         for (const [rgb, arr] of this.colorToPixel) {
-            if (currCheck != this.countPixelId) {
-                console.debug("Interrupt detected!")
+            
+            if (hasInterrupt && 
+                px_iter++ % break_px_check == 0 && 
+                processingFlag != dataView.getUint8(0)) {
+                console.warn("Interrupt detected!")
                 return
             }
 
@@ -537,6 +560,9 @@ self.addEventListener("message",  (event) => {
         case ColorEvent.INPUT_EVENT:
             ColorThreshold.handleCubeInput(event.data)
             break
+        case ColorEvent.FLAG:
+            ColorThreshold.registerFlag(event.data.buffer)
+            break;
         default:
             console.debug(`Invalid Worker Event: ${eventName}`)
             break;

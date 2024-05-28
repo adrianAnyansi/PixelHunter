@@ -1,5 +1,31 @@
 # Overall
 
+So current aim is: the values need to update the current system to work.
+This means:
+RECT for the seperation
+SEGMENTS for the cutting
+COLOR perf improvements since I have to update type color
+COLOR copy after that is complete
+
+IDENTIFY work for Waiting For Start, although right now it's fine honestly
+
+NOTE: I added worker input but suddenly its too fast to be interrupted reliably? Might be async change
+
+# Today
+
+I'm actually going to do interrupt today and take a break- I've been doing some much organizing and the Rust comparison;
+Lets do a simple win.
+I have to do a decent amount before getting back to Grabber
+
+
+1. Add input ranges to rect + new order
+2. add copy to clipboard button
+4. Rewrite the code for tracking drawings so I can always reference to the main rectangle
+5. Make segments & segment code; need to write that to file probably?
+    Or at least segment the copy in COLOR mode?
+
+## Thoughts
+
 Make rotations and translations easier to do
     Maybe rewrite that logic so I can treat it like a pixel thingy
     Fix the wheel event so it's easier to use, bigger hitbox for accidents
@@ -10,51 +36,7 @@ Create the picker for compare canvas
 
 Inversely, show the captured pixels within the cube... somehow (instancing is kinda weird)
 
-Make controls for rect so I can update the server
-
 interrupts so the box is real-time again
-
-once that is done, write the test for Rust vs Node
-
-# Today
-output the box to clipboard
-
-after that, then I do the rust comparison.
-Here's the thing: This requires a rewrite of the name grabber system, and it's quite... intensive.
-I think that will take probably another week depending on how I program that particular implementation solution and test it, which isn't the point of the test.
-
-Simply doing an iteration of pixel counting did not work, it had similar time; I assume this is because sharp has some C++ base, so it's likely that the main culprit will be in
-1. Looping by during flood-fill to find other pixels
-2. Doing matrix transformations (which isn't used currently, but WILL be a huge issue)
-
-Here's exactly the process for making a binarized image
-getImage
-make a copy of the image buffer, normalized to white 255 alpha
-Go down from each username start, from right to left
-check if pixel is in the color range, then do flood-fill
-then continue
-finally, write buffer to file (png)
-
-I'll try the matrix stuff first
-
-...
-Ok maybe my stomach hurts or this is just heresy but-
-what if... the performance gain isnt THAT much? 
-I'm assuming at least x4 but eh I dont even need numbers, I can just write the code with random digits
-LETS DO THAT!
-
-
-### Update
-So barb did another marbles and- I'm realizing 2 things
-1- While pixel hunter exists to eventually work on the League auto mini-map, I'm not super stoked about it
-    I'm far more interested in working on Project Hoard, so Im not motivated
-2- I need to treat this as a *live* project, where downtime matters; if I spend ages working on a solution and ditch it, I've just gotten nothing out of the project
-3- I'm looking more into OpenCV, trying to see if it does a similar thing to what Im looking for
-    I dont think it does
-
-But the plan today is simply, doing the Rust test.
-Thats all I wanna do rn, then play some games I think
-
 
 ## Other
 Did some research on interrupting-
@@ -131,56 +113,3 @@ Took me like 6 hours to have insertables images, I can select rectangles, ahhhh 
 
 Mouse-move works on scrollbars, which fucks up the hover.
 Negative margins could prob fix this
-
-
-# QT UI choosing
-
-## You know what, fuck it we ball
-
-Design Studio crashed out of nowhere, and after some sleep and some Doujinsee bugfixing, I had a relevation.
-
-Why the hell am I spending 3 days (more like 5 now) on a static performance thing
-I can literally write this in the PROGRAM I KNOW (Javascript) and spend way less time thinking and debugging the hell out of Qt.
-Also I just realized that this Qt program will always need binaries built and get updated... and honestly I'm pretty tired and want something to work.
-Maybe much much later I can do a rewrite for native perf but- yeah idk. We ballin
-At least i have func components+
-
-
-## What am I actually doing
-Simple-
-I need QML confirmed. That gets rid of my anxiety about picking things.
-I need to build an extremely simple layout so I can get familar with QML and Qt Design Studio
-
-1. Add a simple layout, with stacked widget
-2. Figure out how to add images (with scroll containers) to that widget
-3. Add a new container for a layer that I can make draw calls to (for the rectangle)
-4. Sync all the containers together for obvious reasons
-
-## Understanding the actual problem
-I've wasted 2 days mulling over using Qt Designer or Qt Design Studio.
-Would be much easier to either commit to an option, or what I'm doing now;
-    doing a small evaluation of each solution.
-
-Qt Quick/QML | Qt Widgets
----
-Hardware-accelerated | Software accelerated
-QML apparently has a hard time 
-
-## Being practical
-
-Ok rethinking a few things
-
-The important things are
-3D Charts: Basically required for this product
-- Need to add arbitary rectangles & circles (and colour them by that)
-- Controls for changing rect rotation/size/c_position
-- Set points with certain transparency (so they overlap and become more solid)
-
-- Image showing & Drawing on a solid object
-- Fast intrep of pixels (actually I can bg work it)
-
-
-The fact that QtQuick is the only thing that supports 3D graphs means that I probably need to use it
-
-
-Ok so-

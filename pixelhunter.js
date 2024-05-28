@@ -8,6 +8,11 @@ class ColorEvent {
     static MOUSE_EVENT = "MOUSE_EVENT"
     static INPUT_EVENT = "INPUT_EVENT"
 }
+globalThis.ColorEvent = ColorEvent
+
+class ThreeJSEvent {
+    static ZOOM = "ZOOM_EVENT"
+}
 
 // First, build main system
 
@@ -63,19 +68,22 @@ function switchState(new_state) {
 function switchToColorMode() {
     // TODO: Make sure 1 image is available
 
-    // TODO: Make sure Rect is highlighted
+    // TODO: Make sure Rect is highlighted and >0 area
     const currTabTracker = ImageElTracker[visibleTabIndex]
     currTabTracker.canvas.classList.remove('visible')
 
     // Show plotly canvas/div on top
-    colorPlotEl.classList.add('visible')
     appFrameDiv.classList.add('color_mode')
 
-    // TODO: Defer this to worker
-    // ColorThreshold.imgBuffer = currTabTracker.ctx.getImageData(...drawMonitor.queue[0].toArray())
     WorkerMonitor.sendImgData(currTabTracker, drawMonitor.queue[0].toNormArray())
-    // ColorThreshold.registerRect(currTabTracker.ctx, drawMonitor.queue[0].toArray())
-    // ColorThreshold.calcPixels()
+}
+
+// TODO: Make this reversible
+// Adding an image should trigger rect flow
+function switchToDebugColorMode() {
+    
+    appFrameDiv.classList.add('color_mode')
+
 }
 
 /** @type {ImageTab[]} Tracks images being shown (and binizaration/chart renders) */
@@ -126,8 +134,6 @@ drawMonitor.register(imageViewerDiv)
 // setInterval(drawMonitor.drawPerFrame.bind(drawMonitor), 1000/30);
 
 // ===========================================================================================
-
-const colorPlotEl = document.querySelector(".color_plot");
 
 const imageTabHeaderDiv = document.querySelector('.image_tab_header');
 
@@ -234,27 +240,6 @@ function swapToImage(tab_idx) {
     visibleTabIndex = parseInt(tab_idx)
     ImageElTracker[tab_idx].header.classList.add('selected')
     ImageElTracker[tab_idx].canvas.classList.add('visible')
-
-    // const new_topTab = ImageElTracker[tab_idx].canvas
-    // if (visibleTabIndex >= 0 && visibleTabIndex != tab_idx) {
-        
-    //     // console.debug(`Switching to tab ${visibleTabIndex} -> ${tab_idx}`)
-        
-    //     let topZIndex = 0;
-    //     let currTabTracker = null
-    //     currTabTracker = ImageElTracker[visibleTabIndex]
-        
-    //     currTabTracker.header.classList.remove('selected', true)
-    //     // swap zindexes
-    //     topZIndex = currTabTracker.canvas.style.zIndex
-    //     currTabTracker.canvas.style.zIndex = new_topTab.style.zIndex;
-
-    //     new_topTab.style.zIndex = topZIndex;
-    // }
-
-    // visibleTabIndex = parseInt(tab_idx)
-    // // document.querySelector('.visible_debug').textContent = visibleTabIndex
-    // ImageElTracker[tab_idx].header.classList.add('selected', true)
 }
 
 class WorkerMonitor {
@@ -307,13 +292,6 @@ class WorkerMonitor {
         WorkerMonitor.updateChart(false)
     }
 
-    static updateChart(update=true) {
-        if (!this.plotDrawn) {
-            Plotly.newPlot(colorPlotEl, [this.chart_test_data], this.threed_scene_options)
-            this.plotDrawn = true
-        } else
-            Plotly.react(colorPlotEl, [this.chart_test_data], this.threed_scene_options)
-    }
 
     // TODO: I might actually write my own charting library, this SVG solution is so
     // goddamn
@@ -355,7 +333,7 @@ class WorkerMonitor {
             WorkerMonitor.worker.postMessage({
                 event: ColorEvent.MOUSE_EVENT,
                 mouseEvent: {
-                    leftBtnDown: event.button === 0,
+                    leftBtnDown: event.button === 1,
                     down: true,
                     point: {
                         x: event.offsetX,
@@ -363,6 +341,7 @@ class WorkerMonitor {
                     }
                 }
             })
+            if (event.button === 1) event.preventDefault()
         })
         canvas.addEventListener("mouseup", event => {
             WorkerMonitor.worker.postMessage({
@@ -377,7 +356,7 @@ class WorkerMonitor {
             WorkerMonitor.worker.postMessage({
                 event: ColorEvent.MOUSE_EVENT,
                 mouseEvent: {
-                    leftBtnDown: event.button === 0,
+                    leftBtnDown: event.buttons === 4,
                     point: {
                         x: event.offsetX,
                         y: event.offsetY
@@ -410,6 +389,11 @@ class WorkerMonitor {
 
         
         const changeFunc = event => {
+            if (WorkerMonitor.pixelCountFlag) {
+                let currVal = WorkerMonitor.pxFlagDataView.getUint8(0)
+                WorkerMonitor.pxFlagDataView.setUint8(0, currVal+1 % 255)
+                console.debug("update val to "+currVal)
+            }
             WorkerMonitor.worker.postMessage({
                 event: ColorEvent.INPUT_EVENT,
                 targetName: event.target.id,
@@ -422,28 +406,57 @@ class WorkerMonitor {
         cubeControls.addEventListener("input", changeFunc);
 
         cubeControls.addEventListener('wheel', event => {
-            if (event.target.nodeName != "INPUT")
-                return
+            let targetObj = event.target;
+            
+            if (targetObj.nodeName != "INPUT") {
+                // search parent for input node
+                let parentEl = targetObj.parentElement
+                if (parentEl.classList.contains("scroller"))
+                    targetObj = parentEl.querySelector('input')
+                
+                let parentEl2 = targetObj.parentElement.parentElement
+                if (parentEl2.classList.contains("scroller"))
+                    targetObj = parentEl2.querySelector('input')
+
+                
+                if (targetObj.nodeName != "INPUT")
+                    return
+            }
+            
             // TODO: Get the div and then search for input, so I can use the label
 
             const isShift = event.getModifierState("Shift");
             const isCtrl = event.getModifierState("Control")
-            let currVal = parseInt(event.target.value)
+            let currVal = parseInt(targetObj.value)
 
             let modifier = 1 * (isShift ? 10 : 1) * (isCtrl ? 5 : 1)
 
             if (event.deltaY > 0) {
-                event.target.value = currVal - modifier;
+                targetObj.value = currVal - modifier;
             } else if (event.deltaY < 0) {
-                event.target.value = currVal + modifier;
+                targetObj.value = currVal + modifier;
             }
             // need to trigger an input event
-            event.target.dispatchEvent(new Event('input', {bubbles: true}))
+            targetObj.dispatchEvent(new Event('input', {bubbles: true}))
             event.preventDefault()
         })
     }
 
     // TODO: Add wheel event on all ranges for 1/10 ticks per wheel
+
+    static pixelCountFlag = null;
+    static pxFlagDataView = null;
+    static sendCubeSharedBuffer() {
+        if (!window.crossOriginIsolated) {
+            console.error("Cross origin headers are not set. The worker is not interruptable.")
+            return
+        }
+
+        this.pixelCountFlag = new SharedArrayBuffer(1,  { maxByteLength: 16 });
+        this.pxFlagDataView = new DataView(this.pixelCountFlag)
+        WorkerMonitor.worker.postMessage({ event: "flag",
+            buffer: this.pixelCountFlag})
+    }
 
 }
 
@@ -454,9 +467,11 @@ function init () {
     
     drawCanvas.width = imageViewerDiv.clientWidth
     drawCanvas.height = imageViewerDiv.clientHeight
-    // drawCanvas.style.display = 'none'
-
     // TODO: Make a quick COLOR mode function for testing graph stuff
+    // switchToDebugColorMode()
+
+    
+    WorkerMonitor.sendCubeSharedBuffer()
 
     WorkerMonitor.registerCubeControls()
     drawMonitor.queue.push(new DrawableRectangle(...[1550, 157, -301, 535]))
@@ -467,9 +482,6 @@ function init () {
         document.querySelector('canvas.compare'),
         document.querySelector('canvas.chart'))
 
-    // TODO: Add shared array for interrupt flag with Worker
-    // const flagObj = new SharedArrayBuffer(8);
-    // WorkerMonitor.sendCubeSharedBuffer({event: "flag", sharedFlag: flagObj}, flagObj)
     
     document.getElementById('height').value = 100;
     document.getElementById('height').dispatchEvent(new InputEvent('input', {'bubbles': true}))

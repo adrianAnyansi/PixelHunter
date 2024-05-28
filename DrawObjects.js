@@ -182,7 +182,7 @@ class DrawableRectangle {
             w *= -1
         }
         if (h < 0) {
-            y -= h
+            y += h
             h *= -1
         }
         return [x,y,w,h];
