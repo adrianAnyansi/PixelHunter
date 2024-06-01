@@ -12,11 +12,24 @@ IDENTIFY work for Waiting For Start, although right now it's fine honestly
 NOTE: I added worker input but suddenly its too fast to be interrupted reliably? Might be async change
 
 # Today
+Segmented rect code & cleanup
+    add button
+    add listener & update ranges
+    (use compare canvas to display with button, split them)
+    Rewrite the ranges and such
 
-I'm actually going to do interrupt today and take a break- I've been doing some much organizing and the Rust comparison;
-Lets do a simple win.
-I have to do a decent amount before getting back to Grabber
+After segments, I need to verify the waiting for start code
 
+Or start writing the identify code (shouldn't be too hard)
+    take all images & px in the rect
+    (no need to show match/non-match, just account for background changes with images)
+    compute only similar colors (with redmean detecting blobs with weighing & flood-fill)
+    Spit out the computed probabilities for the program
+
+After that, manually determine the color cubes
+    then take that data and update the information in current code
+    
+Run that system and build testing to run different settings
 
 1. Add input ranges to rect + new order
 2. add copy to clipboard button
@@ -36,7 +49,6 @@ Create the picker for compare canvas
 
 Inversely, show the captured pixels within the cube... somehow (instancing is kinda weird)
 
-interrupts so the box is real-time again
 
 ## Other
 Did some research on interrupting-

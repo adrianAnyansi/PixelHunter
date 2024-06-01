@@ -81,15 +81,15 @@ class ColorThreshold {
         this.camera.lookAt(this.rotatePoint)
 
         this.scene = new THREE.Scene();
+        
+        this.renderOnRequestFrame() // NOTE: Do I need to render here
+    }
 
-        // console.debug("rendered?")
+    static addDebugCubes() {
+        
         this.addThreeAxis();
-
-        // testing
         this.addCube([0,0,0], 0xFF0000, 100, 100, 100)
         this.addCube([255, 255, 255], 0xFFFFFF)
-        
-        this.renderOnRequestFrame()
     }
 
     /** Add scene, light and bounding box
@@ -294,7 +294,6 @@ class ColorThreshold {
      */
     static registerBuffer(buffer, rect) {
         ColorThreshold.buffer = buffer
-        // TODO: Transfer offscreen canvas instead of buffer?
         const uintBuffer = new Uint8ClampedArray(buffer)
         ColorThreshold.imgData = new ImageData(uintBuffer, rect[2], rect[3]);
 
@@ -410,6 +409,8 @@ class ColorThreshold {
 
     static handleCubeInput(event) {
         // console.debug("Handling cube input event")
+        if (!this.boundBox) return;
+
         const degToRad = Math.PI / 180;
 
         const posFunc = (index, val) => {this.boundBox.position.setComponent(index, val)}
@@ -465,7 +466,7 @@ class ColorThreshold {
         if (hasInterrupt) {
             dataView = new DataView(this.pixelCountFlag, 0)
             processingFlag = dataView.getUint8(0)
-            console.debug(`Counting with flag ${processingFlag}`)
+            // console.debug(`Counting with flag ${processingFlag}`)
         }
         
         const pos_obj = new THREE.Vector3();
@@ -536,33 +537,30 @@ self.addEventListener("message",  (event) => {
             ColorThreshold.registerDrawCanvas(offCanvas);
             ColorThreshold.initThrees(graphCanvas)
             break;
+
         case ColorEvent.REGISTER_DATA:
             const {buffer, rect} = event.data
             ColorThreshold.registerBuffer(buffer, rect);
             ColorThreshold.calcPixelsNEW();
             ColorThreshold.addBoundingWireframeBox()
-            // After calculation, show the plot by going to main thread
-            self.postMessage({event: ColorEvent.PLOT_READY, 
-                chart:{
-                    x: ColorThreshold.coord_x,
-                    y: ColorThreshold.coord_y,
-                    z: ColorThreshold.coord_z,
-                    size: ColorThreshold.coord_size,
-                    color: ColorThreshold.coord_c
-            }});
             break;
+
         case ColorEvent.WHEEL_EVENT:
             ColorThreshold.wheelEvent(event.data.wheelEvent)
             break;
+
         case ColorEvent.MOUSE_EVENT:
             ColorThreshold.handleMouseButton(event.data.mouseEvent)
             break;
+
         case ColorEvent.INPUT_EVENT:
             ColorThreshold.handleCubeInput(event.data)
             break
+
         case ColorEvent.FLAG:
             ColorThreshold.registerFlag(event.data.buffer)
             break;
+
         default:
             console.debug(`Invalid Worker Event: ${eventName}`)
             break;
