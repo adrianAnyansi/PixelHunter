@@ -64,9 +64,11 @@
                 
                 grid-column: 1;
                 grid-row: 4;
+                background-color: "snow";
             }
 
-            .color_mode canvas.compare {
+            .color_mode canvas.compare,
+            canvas.compare.cut {
                 display: inherit;
             }
 
@@ -132,6 +134,11 @@
             .rect_mode  .controls #color_cube_control {
                 display: none;
             }
+
+            #segments {
+                display:inline-block; 
+                width:3.5em;
+            }
         </style>
     </head>
     <body>
@@ -181,8 +188,9 @@
                     </div>
                     <div class="scroller rect_segments">
                         <span>Segments</span>
-                        <input style="display:inline-block; width:3em" id="segments" type="number" value="1" min="1" max="200">
+                        <input id="segments" type="number" value="1" min="1" max="200">
                     </div>
+                    <button id="rect_cut_button">Cut Image</button>
                 </div>
 
                 <div id="color_cube_control">

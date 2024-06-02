@@ -18,6 +18,8 @@ Segmented rect code & cleanup
     (use compare canvas to display with button, split them)
     Rewrite the ranges and such
 
+Looking like: [x:1652, y:125, w:-264, h:955] are my coords
+
 After segments, I need to verify the waiting for start code
 
 Or start writing the identify code (shouldn't be too hard)

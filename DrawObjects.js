@@ -8,18 +8,25 @@ class DrawingMonitor {
     constructor(canvas) {
         /** @type {Drawables[]} All drawables queued in this */
         this.queue = [];
+        this.segmentList = [];
+        /** @type {Boolean} What direction do segments go in */
+        this.segmentRows = true;
+        this.drawRect = new DrawableRectangle(0,0,1,1)
+        this.queue.push(this.drawRect);
+
         this.canvas = canvas;
         this.canvas.style.zIndex = 100; // Push above all other images
         /** @type {CanvasRenderingContext2D} Draw context */
         this.ctx = this.canvas.getContext('2d', {alpha: true})
         /** Used to representing flicker or marching-ants effects */
         this.timer = 0;
-
+        
         this.pointer_origin = null;
     }
 
     drawPerFrame (addTimer=1) {
         // TODO: Clear then freeze when queue empty
+        // if (this.queue.length == 0) return;
         // I could get the bounding rect of the queue, but nah
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
@@ -43,6 +50,86 @@ class DrawingMonitor {
         setInterval(drawMonitor.drawPerFrame.bind(drawMonitor), 1000/30);
     }
 
+    /** update main drawable rectangle */
+    updateDrawRect(rectObj) {
+
+        const drawRect = this.drawRect;
+        drawRect.x = rectObj.x;
+        drawRect.y = rectObj.y;
+        drawRect.width = rectObj.width;
+        drawRect.height = rectObj.height;
+
+        // create segments - current TRY and evenly distribute, otherwise put segment at end
+        const segments = rectObj?.segments ?? this.segmentList.length;
+
+        while (this.segmentList.length < segments) {
+            // add segements until this is ok
+            const new_seg = new DrawableLine(0,0,0,0)
+            this.segmentList.push(new_seg)
+            this.queue.push(new_seg)
+        }
+
+        while (this.segmentList.length > 0 && this.segmentList.length > segments) {
+            const seg = this.segmentList.pop();
+            // NOTE: could pool segments 
+            const idx = this.queue.indexOf(seg)
+            if (idx !== -1)
+                this.queue.splice(idx, 1)
+        }
+
+        // const array = this.drawRect.toNormArray();
+        const segWidthFloat = this.segmentRows ? 
+                                this.drawRect.height / (segments+1) :
+                                this.drawRect.width / (segments+1);
+        const segWidth = Math.round(segWidthFloat);
+
+        // Place segments
+        let startx = this.drawRect.x;
+        let starty = this.drawRect.y;
+
+        for (let segment of this.segmentList) {
+            if (this.segmentRows)
+                starty += segWidth;
+            else
+                startx += segWidth;
+
+            segment.x = startx;
+            segment.y = starty;
+            
+            segment.color = DrawableLine.COLOR;
+            
+            // If the last segment is too short/long (see round), last one is always BAD_COLOR
+            if (segWidth !== segWidthFloat && segment === this.segmentList.at(-1)) {
+                segment.color = DrawableLine.BAD_COLOR;
+            }
+
+            if (this.segmentRows) {
+                segment.x2 = startx + this.drawRect.width;
+                segment.y2 = starty
+            } else {
+                segment.y2 = starty + this.drawRect.height;
+                segment.x2 = startx
+            }
+        }
+
+        WorkerMonitor.updateRectControls(this.drawRect)
+        rectCoordDisplayEl.textContent = this.drawRect.toString() + ` s:${segments}`
+
+    }
+
+    get rectObj () {
+        const arr = this.drawRect.toNormArray()
+        return {
+            x: arr[0],
+            y: arr[1],
+            width: arr[2],
+            height: arr[3],
+            segments: this.segmentList.length,
+            vertDir: this.segmentRows
+        }
+    }
+
+    // drawing functions
     POINTER_DOWN = false;
 
     /**
@@ -59,19 +146,24 @@ class DrawingMonitor {
 
             // TODO: Clean-up update rect code, prevent negatives
             if (isShift) {
-                this.pointer_origin = new Point(this.queue[0].x, this.queue[0].y);
-                this.queue[0].width = mouseEvent.offsetX - this.queue[0].x
-                this.queue[0].height = mouseEvent.offsetY - this.queue[0].y
+                this.pointer_origin = new Point(this.drawRect.x, this.drawRect.y);
+                this.updateDrawRect({
+                    x: this.drawRect.x,
+                    y: this.drawRect.y,
+                    width: mouseEvent.offsetX - this.drawRect.x,
+                    height: mouseEvent.offsetY - this.drawRect.y
+                })
             } else {
                 this.pointer_origin = new Point(mouseEvent.offsetX, mouseEvent.offsetY)
                 // Remove hard coded
-                this.queue[0].x = mouseEvent.offsetX
-                this.queue[0].y = mouseEvent.offsetY
-                this.queue[0].width = 1
-                this.queue[0].height = 1
+                this.updateDrawRect({
+                    x: mouseEvent.offsetX,
+                    y: mouseEvent.offsetY,
+                    width: 1,
+                    height: 1
+                })
             }
 
-            rectCoordDisplayEl.textContent = this.queue[0].toString()
             // console.log(`set ${this.pointer_origin}`)
         }
     }
@@ -116,24 +208,17 @@ class DrawingMonitor {
 
         if (!DrawingMonitor.POINTER_DOWN) return
         if (mouseEvent.buttons & 1 > 0) {
-            // console.debug("mouse move")
             // If left-click is down
-            let drawRect = null;
-            if (this.queue.length <= 0) {
-                drawRect = new DrawableRectangle(
-                    this.pointer_origin.x, 
-                    this.pointer_origin.y,
-                    1,1)
-                this.queue.push()
-            } else {
-                drawRect = this.queue[0]
-            }
             
             // update drawRect bounds
-            drawRect.width = mouseEvent.offsetX - this.pointer_origin.x;
-            drawRect.height = mouseEvent.offsetY - this.pointer_origin.y;
+            this.updateDrawRect({
+                x: this.pointer_origin.x,
+                y: this.pointer_origin.y,
+                width: mouseEvent.offsetX - this.pointer_origin.x,
+                height: mouseEvent.offsetY - this.pointer_origin.y
+            })
 
-            rectCoordDisplayEl.textContent = drawRect.toString()
+            rectCoordDisplayEl.textContent = this.drawRect.toString()
         }
     }
 
@@ -147,8 +232,6 @@ class DrawableRectangle {
         this.y = parseInt(y, 10)
         this.width = parseInt(w, 10)
         this.height = parseInt(h, 10)
-
-        // this.flic
     }
 
     /**
@@ -167,7 +250,6 @@ class DrawableRectangle {
     }
 
     toString() {
-        // TODO: Normalize ( no negative width/height)
         return `[x:${this.x}, y:${this.y}, w:${this.width}, h:${this.height}]`
     }
 
@@ -203,6 +285,42 @@ class DrawableRectangle {
         // FIXME: https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API/Tutorial/Applying_styles_and_colors
         // Need to make pixel perfect so fun :)
         ctx.rect(this.x-0.5, this.y-0.5, this.width+1, this.height+1);
+        ctx.stroke();
+    }
+}
+
+/** Drawable Line for rect segments */
+class DrawableLine {
+
+    static COLOR = "lightblue"
+    static BAD_COLOR = "lightcoral"
+
+    /** Two points is the way to do this */
+    constructor(x,y, x2,y2) {
+        this.x = x;
+        this.y = y;
+        this.x2 = x2;
+        this.y2 = y2;
+        this.color = this.COLOR;
+    }
+
+    toString() {
+        return `[x:${this.x}, y:${this.y}, x2:${this.x2}, y2:${this.y2}]`
+    }
+
+    /**
+     * Draw line
+     * @param {CanvasRenderingContext2D} ctx
+     * @param {number} timer
+     */
+    draw(ctx, timer) {
+        ctx.beginPath()
+        ctx.strokeStyle = this.color;
+        ctx.setLineDash([4.5, 3.5])
+        ctx.lineDashOffset = timer;
+
+        ctx.moveTo(this.x-0.5, this.y-0.5);
+        ctx.lineTo(this.x2-0.5, this.y2-0.5);
         ctx.stroke();
     }
 }

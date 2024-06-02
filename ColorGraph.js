@@ -174,7 +174,6 @@ class ColorThreshold {
             const boxGeometry = new THREE.BoxGeometry(1, 1, 1);
             const wireframe = new THREE.WireframeGeometry(boxGeometry);
 
-            // TODO: MAKE ONLY EDGES
             const boxLines = new THREE.LineSegments( this.box(), new THREE.LineDashedMaterial( { dashSize: 100, gapSize: 50 } ) );
             boxLines.material.depthTest = false;
             boxLines.material.opacity = 0.25;
@@ -287,6 +286,57 @@ class ColorThreshold {
     /** Take offscreen canvas object and register to it */
     static registerDrawCanvas(offCanvas) {
         ColorThreshold.compareCanvas = offCanvas;
+    }
+
+    /** Input buffer for cut image */
+    static registerCutBuffer(buffer, rectObj) {
+        const uintBuffer = new Uint8ClampedArray(buffer);
+        const imgData = new ImageData(uintBuffer, rectObj.width, rectObj.height);
+        const pxGap = 2;
+
+        ColorThreshold.compareCanvas.width = rectObj.width + pxGap*rectObj.segments;
+        ColorThreshold.compareCanvas.height = rectObj.height + pxGap*rectObj.segments;
+
+        const ctx = ColorThreshold.compareCanvas.getContext('2d');
+        const isRows = rectObj.vertDir;
+        
+        // NOTE: Not allowed to send invalid bounds
+
+        // TODO: So many dimensions depend on this coinflip of vertDir
+
+        const segChange = {
+            d_off: isRows ? [0, pxGap] : [pxGap, 0],
+            s_off: isRows ? [0, Math.round(rectObj.height / (rectObj.segments+1))] : 
+                [Math.round(rectObj.width/(rectObj.segments+1)), 0],
+            w: isRows ? rectObj.width : rectObj.width/(rectObj.segments+1),
+            h: isRows ? rectObj.height / (rectObj.segments+1) : rectObj.height,
+        }
+
+        const bounds = {
+            dx: isRows ? 0 : pxGap,
+            dy: isRows ? pxGap : 0,
+            sx: isRows ? 0 : rectObj.width/(rectObj.segments+1),
+            sy: isRows ? rectObj.height / (rectObj.segments+1) : 0,
+            w: isRows ? rectObj.width : rectObj.width/(rectObj.segments+1),
+            h: isRows ? rectObj.height / (rectObj.segments+1) : rectObj.height,
+        }
+
+        let st_x = 0;
+        let st_y = 0;
+
+        for (let i=0; i<rectObj.segments+1; i++) {
+            // NOTE: Put image draws in the same position as the source image
+            ctx.putImageData(
+                imgData, 
+                segChange.d_off[0] * i,
+                segChange.d_off[1] * i,
+                st_x,
+                st_y,
+                segChange.w, segChange.h);
+            
+            st_x += segChange.s_off[0]
+            st_y += segChange.s_off[1]
+        }
     }
 
     /** Register the array buffer, building a new imageData object and
@@ -559,6 +609,11 @@ self.addEventListener("message",  (event) => {
 
         case ColorEvent.FLAG:
             ColorThreshold.registerFlag(event.data.buffer)
+            break;
+
+        case "cutRectImage":
+            const {rectBuffer, rectObj} = event.data
+            ColorThreshold.registerCutBuffer(rectBuffer, rectObj)
             break;
 
         default:

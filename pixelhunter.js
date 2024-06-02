@@ -81,7 +81,7 @@ class App {
         appFrameDiv.classList.add(App.COLOR_MODE)
         appFrameDiv.classList.remove(App.RECT_MODE)
 
-        WorkerMonitor.sendImgData(currTabTracker, drawMonitor.queue[0].toNormArray())
+        WorkerMonitor.sendImgData(currTabTracker, drawMonitor.drawRect.toNormArray())
     }
     
     //TODO: Adding an image should trigger rect flow
@@ -221,9 +221,6 @@ async function createNewImageCanvas(imageBlob, img_name) {
 
     // update drawCanvas bounds
     App.updateDrawCanvasBounds(imgBitmap)
-    // drawCanvas.width = imgBitmap.width 
-    // drawCanvas.height = imgBitmap.height
-    
     const newCanvas = document.createElement('canvas');
     newCanvas.classList.add("image")
     newCanvas.width = imgBitmap.width
@@ -245,7 +242,7 @@ function addNewImageToViewer(newImgCanvas, img_name) {
     imgHeader.addEventListener('click', swapToImage.bind(this, tab_idx))
     imageTabHeaderDiv.appendChild(imgHeader)
 
-    let imgTracker = new ImageTab(newImgCanvas, newImgCanvas.getContext('2d'), imgHeader)
+    let imgTracker = new ImageTab(newImgCanvas, newImgCanvas.getContext('2d', { willReadFrequently: true }), imgHeader)
     ImageElTracker.push(imgTracker)
     console.log("pushed new img")
 
@@ -291,6 +288,16 @@ class WorkerMonitor {
             buffer: dataArray,
             rect: rect},
         [dataArray])
+    }
+
+    static sendCutData(tabTracker, rect) {
+        const dataArray = tabTracker.ctx.getImageData(...rect).data.buffer
+        document.querySelector('canvas.compare').classList.add('cut')
+
+        WorkerMonitor.worker.postMessage({ event: 'cutRectImage',
+            rectBuffer: dataArray,
+            rectObj: drawMonitor.rectObj
+        }, [dataArray])
     }
 
     static setupThreeCanvas(canvas) {
@@ -416,28 +423,34 @@ class WorkerMonitor {
 
     static registerRectControls () {
 
+        document.querySelector('#rect_cut_button').addEventListener('click', event => {
+            const currTabTracker = ImageElTracker[visibleTabIndex]
+            if (!currTabTracker) return;
+            WorkerMonitor.sendCutData(currTabTracker, drawMonitor.drawRect.toNormArray())
+        })
+
         const rect_controls = document.querySelector("#rect_control");
-        const allInputs = document.querySelectorAll("#rect_control .input")
+        const allInputs = document.querySelectorAll("#rect_control input")
         const rect_order = new Map(Object.entries({
             rect_left: "x", 
             rect_up: "y", 
-            rect_right: "width", 
-            rect_down: "height",
-            rect_segments: "segments"}))
+            rect_right: "x2", 
+            rect_down: "y2",
+            segments: "segments"}))
 
         // change function
         rect_controls.addEventListener("input", inputEvent => {
-            // get rect
-            const drawRect = drawMonitor.drawRect
             // For ease of use, overwrite rect direction when taking an input event
-            const valRect = {}
+            const rectUpdate = {}
             for (let el of allInputs) {
-                const el_name = el.classList.keys() // TODO: Better code here
-                if (rect_order.contains(el_name) )
-                    valRect[rect_order.get(el_name)] = parseInt(el.value)
+                const el_name = el.id // TODO: Better code here?
+                if (rect_order.has(el_name) )
+                    rectUpdate[rect_order.get(el_name)] = parseInt(el.value)
             }
+            rectUpdate.width = rectUpdate.x2 - rectUpdate.x;
+            rectUpdate.height = rectUpdate.y2 - rectUpdate.y;
             // Now, with well-formed rect, update rect
-            // drawMonitor.updateDrawRect(valRect);
+            drawMonitor.updateDrawRect(rectUpdate);
             // TODO: There's no validation for the segments type=number 
             if (inputEvent.target.id != "segments")
                 inputEvent.target.parentElement.querySelector('span').textContent = inputEvent.target.value
@@ -472,7 +485,24 @@ class WorkerMonitor {
             targetObj.dispatchEvent(new Event('input', {bubbles: true}))
             event.preventDefault()
         }, {passive: false})
-    } 
+    }
+
+    static updateRectControls (rectObj) {
+        // need to directly update controls like this-
+        // validate loop is a concern!!!
+        document.querySelector("#rect_left").value = rectObj.x
+        document.querySelector(".rect_left").querySelector('span').textContent = rectObj.x
+
+        document.querySelector("#rect_up").value = rectObj.y
+        document.querySelector(".rect_up").querySelector('span').textContent = rectObj.y
+
+        document.querySelector("#rect_right").value = rectObj.x + rectObj.width
+        document.querySelector(".rect_right").querySelector('span').textContent = rectObj.x + rectObj.width
+        
+        document.querySelector("#rect_down").value = rectObj.y + rectObj.height
+        document.querySelector(".rect_down").querySelector('span').textContent = rectObj.y + rectObj.height
+        // segments cant be changed programmatically
+    }
 
     static pixelCountFlag = null;
     static pxFlagDataView = null;
@@ -494,10 +524,9 @@ class WorkerMonitor {
 function init () {
     // On DOM load
     App.switchState(App.STATES.RECT)
-    App.updateDrawCanvasBounds()    
-
     // TODO: Make a quick COLOR mode function for testing graph stuff
     // App.switchToDebugColorMode()
+    App.updateDrawCanvasBounds()
 
     // Make worker & canvas
     WorkerMonitor.worker.onmessage = WorkerMonitor.handleMessage
@@ -510,7 +539,10 @@ function init () {
         document.querySelector('canvas.chart'))
 
     // testing
-    drawMonitor.queue.push(new DrawableRectangle(...[1550, 157, -301, 535]))
+    drawMonitor.updateDrawRect(
+        {x: 30, y:30, width: 50, height: 50, segments: 1}
+    )
+    // drawMonitor.queue.push(new DrawableRectangle(...[1550, 157, -301, 535]))
 
     // Set default values for this
     document.getElementById('height').value = 100;
