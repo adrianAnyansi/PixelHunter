@@ -68,8 +68,10 @@
             }
 
             .color_mode canvas.compare,
+            canvas.compare.ident,
             canvas.compare.cut {
                 display: inherit;
+                background-color: #FFFFFF44;
             }
 
             .image_viewer canvas.chart {
@@ -164,10 +166,11 @@
 
             <div class="controls">
                 <p>Title: Pixel Hunter</p>
+                <button id="remove_btn">REMOVE IMAGE</button>
                 <p>STATE: <span id="state_display"></span></p>
-                <button id="rect_btn" disabled onclick="App.switchState(App.STATES.RECT)">RECT</button>
-                <button id="color_btn" disabled="" onclick="App.switchState(App.STATES.COLOR)">COLOR</button>
-                <button id="ident_btn" disabled=""  onclick="App.switchState(App.STATES.IDENT)">IDENT</button>
+                <button id="rect_btn" disabled >RECT</button>
+                <button id="color_btn" disabled="" >COLOR</button>
+                <button id="ident_btn" disabled="" >IDENT</button>
                 <div id="rect_control">
                     <p>Rect control</p>
                     <div class="scroller rect_left">
@@ -188,7 +191,7 @@
                     </div>
                     <div class="scroller rect_segments">
                         <span>Segments</span>
-                        <input id="segments" type="number" value="1" min="1" max="200">
+                        <input id="segments" type="number" value="0" min="1" max="200">
                     </div>
                     <button id="rect_cut_button">Cut Image</button>
                 </div>
@@ -251,6 +254,6 @@
         import three from 'https://cdn.jsdelivr.net/npm/three@0.164.1/+esm'
         </script> -->
     <!-- <script type="module" src="ColorGraph.js"></script> -->
-    <script type="text/javascript" src="DrawObjects.js"></script>
-    <script type="text/javascript" src="pixelhunter.js"></script>
+    <!-- <script type="module" src="DrawObjects.js"></script> -->
+    <script type="module" src="pixelhunter.js"></script>
 </html>

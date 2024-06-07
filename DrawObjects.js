@@ -1,6 +1,9 @@
 // Write class to manage drawing class stuff
 /** Declarative UI to keep track of stuff on top of images */
-class DrawingMonitor {
+
+import {App, WorkerMonitor} from './pixelhunter.js'
+
+export class DrawingMonitor {
     /**
      * 
      * @param {HTMLCanvasElement} canvas 
@@ -22,6 +25,7 @@ class DrawingMonitor {
         this.timer = 0;
         
         this.pointer_origin = null;
+        this.rectTextEl = null;
     }
 
     drawPerFrame (addTimer=1) {
@@ -41,13 +45,14 @@ class DrawingMonitor {
     /**
      * Register this as responsible for handling mouse events
      */
-    register (imageViewerDiv) {
+    register (imageViewerDiv, rectTextEl) {
         imageViewerDiv.addEventListener('mousemove', this.mouseMoveHandler.bind(this))
         imageViewerDiv.addEventListener('mouseup', this.mouseUpHandler.bind(this))
         imageViewerDiv.addEventListener('mousedown', this.mouseDownHandler.bind(this))
         // imageViewerDiv.addEventListener('mouseleave', this.mouseLeaveHandler.bind(this))
 
-        setInterval(drawMonitor.drawPerFrame.bind(drawMonitor), 1000/30);
+        this.rectTextEl = rectTextEl
+        setInterval(this.drawPerFrame.bind(this), 1000/30);
     }
 
     /** update main drawable rectangle */
@@ -113,7 +118,7 @@ class DrawingMonitor {
         }
 
         WorkerMonitor.updateRectControls(this.drawRect)
-        rectCoordDisplayEl.textContent = this.drawRect.toString() + ` s:${segments}`
+        
 
     }
 
@@ -204,7 +209,8 @@ class DrawingMonitor {
 
         // Track mouse position
         const mousePos = new Point(mouseEvent.offsetX,mouseEvent.offsetY)
-        mousePosDisplayEl.textContent = `(${mousePos.x}, ${mousePos.y})`
+        WorkerMonitor.updateMouseText(`(${mousePos.x}, ${mousePos.y})`)
+        // mousePosDisplayEl.textContent = 
 
         if (!DrawingMonitor.POINTER_DOWN) return
         if (mouseEvent.buttons & 1 > 0) {
@@ -218,7 +224,7 @@ class DrawingMonitor {
                 height: mouseEvent.offsetY - this.pointer_origin.y
             })
 
-            rectCoordDisplayEl.textContent = this.drawRect.toString()
+            // rectCoordDisplayEl.textContent = this.drawRect.toString()
         }
     }
 

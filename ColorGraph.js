@@ -3,24 +3,19 @@
 // import * as THREE from 'three';
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.124/build/three.module.js';
 
-
-class ColorEvent {
-    static REGISTER_CANVAS = 'REGISTER_CANVAS'
-    static REGISTER_DATA = 'REGISTER_DATA'
-
-    static PLOT_READY = "PLOT_READY"
-    static WHEEL_EVENT = "WHEEL_EVENT"
-    static MOUSE_EVENT = "MOUSE_EVENT"
-    static INPUT_EVENT = "INPUT_EVENT"
-    static FLAG = 'flag'
-}
+import { ColorEvent } from "./event_module.js";
 
 /** This is the object that compares the thresholds and displays the 3D plot
  * It keeps track of the image buffer
  */
 class ColorThreshold {
+    /** @type {ImageData} imageData from single rectangle */
     static imgData = null;
+    /** @type {OffscreenCanvas} canvas for feedback */
     static compareCanvas = null;
+    /** @type {RenderingContext} rendering context */
+    static compareCtx = null;
+    /** @property {Map[number[], number[]]} */
     static colorToPixel = new Map();
     static coord_x = [];
     static coord_y = [];
@@ -286,6 +281,7 @@ class ColorThreshold {
     /** Take offscreen canvas object and register to it */
     static registerDrawCanvas(offCanvas) {
         ColorThreshold.compareCanvas = offCanvas;
+        ColorThreshold.compareCtx = offCanvas.getContext('2d', {willReadFrequently: true});
     }
 
     /** Input buffer for cut image */
@@ -297,7 +293,7 @@ class ColorThreshold {
         ColorThreshold.compareCanvas.width = rectObj.width + pxGap*rectObj.segments;
         ColorThreshold.compareCanvas.height = rectObj.height + pxGap*rectObj.segments;
 
-        const ctx = ColorThreshold.compareCanvas.getContext('2d');
+        const ctx = ColorThreshold.compareCtx;
         const isRows = rectObj.vertDir;
         
         // NOTE: Not allowed to send invalid bounds
@@ -312,20 +308,12 @@ class ColorThreshold {
             h: isRows ? rectObj.height / (rectObj.segments+1) : rectObj.height,
         }
 
-        const bounds = {
-            dx: isRows ? 0 : pxGap,
-            dy: isRows ? pxGap : 0,
-            sx: isRows ? 0 : rectObj.width/(rectObj.segments+1),
-            sy: isRows ? rectObj.height / (rectObj.segments+1) : 0,
-            w: isRows ? rectObj.width : rectObj.width/(rectObj.segments+1),
-            h: isRows ? rectObj.height / (rectObj.segments+1) : rectObj.height,
-        }
-
         let st_x = 0;
         let st_y = 0;
 
         for (let i=0; i<rectObj.segments+1; i++) {
             // NOTE: Put image draws in the same position as the source image
+            // so dx,dy is an offset from source pos
             ctx.putImageData(
                 imgData, 
                 segChange.d_off[0] * i,
@@ -349,8 +337,8 @@ class ColorThreshold {
 
         ColorThreshold.compareCanvas.width = rect[2] * 2;
         ColorThreshold.compareCanvas.height = rect[3];
-        ColorThreshold.compareCanvas.getContext('2d').putImageData(this.imgData, 0, 0)
-        ColorThreshold.compareCanvas.getContext('2d').putImageData(this.imgData, rect[2], 0)
+        ColorThreshold.compareCtx.putImageData(this.imgData, 0, 0)
+        ColorThreshold.compareCtx.putImageData(this.imgData, rect[2], 0)
 
         ColorThreshold.colorToPixel.clear();
 
@@ -372,7 +360,9 @@ class ColorThreshold {
     }
     
 
-    /** Calculate all pixel colours within this rect */
+    /**
+     * Deprecated for calcPixelNEW 
+     * Calculate all pixel colours within this rect */
     static calcPixels() {
         if (!ColorThreshold.imgData) return; // throw error or smth
 
@@ -445,8 +435,14 @@ class ColorThreshold {
         )
 
         let cubeNum = 0;
+        // TODO: Adjustable scaleFactor makes it much easier to see useful pixels
+        // Implement slider based on testing
+        // const scaleFactor = this.imgData.data.length * 1/100_000; 
         const matrix = new THREE.Matrix4();
         for (let [rgb, arr] of this.colorToPixel) {
+            // const scale = arr.length/scaleFactor;
+            const scale = 1;
+            matrix.makeScale(scale, scale, scale)
             matrix.setPosition(...rgb)
             instanceMesh.setMatrixAt(cubeNum, matrix)
             instanceMesh.setColorAt(cubeNum, new THREE.Color(this.getRGBFromArray(rgb)));
@@ -562,11 +558,72 @@ class ColorThreshold {
             }
         }
 
-        const context = ColorThreshold.compareCanvas.getContext('2d')
-        context.putImageData(copyImgData, this.imgData.width, 0)
+        ColorThreshold.compareCtx.putImageData(copyImgData, this.imgData.width, 0)
 
         const time_taken = performance.now() - s_ts;
         console.debug(`Pixel Binarization in ${time_taken}ms`)
+    }
+
+
+    /**
+     * Take multiple buffers and build a template image from the text
+     * @param {ArrayBuffer[]} buffers rect buffers from images
+     */
+    static identTemplateImage(buffers, bufferValid, rectObj) {
+
+        const validBuffers = buffers.filter((buffer, index, buffers) => bufferValid[index]);
+        const invalidBuffers = buffers.filter((buffer, index, _a) => !bufferValid[index]);
+
+        ColorThreshold.compareCanvas.width = rectObj.width;
+        ColorThreshold.compareCanvas.height = rectObj.height;
+
+        const ctx = ColorThreshold.compareCtx
+        const imgData = ctx.getImageData(0, 0, rectObj.width, rectObj.height);
+
+        const ignoreDim = 25;
+        const maxCube = (255-ignoreDim)*3;
+
+        const dataViews = buffers.map(buffer => new DataView(buffer))
+        for (let px_offset=0; px_offset+4 < buffers[0].byteLength; px_offset+=4) {
+
+            const rgb = [0,0,0];
+            const minRGB = [255,255,255];
+            const maxRGB = [0,0,0];
+            // Pixel so I gotta save on cycles
+            for (const dv of dataViews) {
+                const c_rgb = [dv.getUint8(px_offset), dv.getUint8(px_offset+1), dv.getUint8(px_offset+2)];
+                for (let i=0; i<3; i++) {
+                    rgb[i] += c_rgb[i];
+                    // NOTE: This could be axis aligned but ya
+                    // TODO: This needs to be weighed per measurement or outliers dominate
+                    minRGB[i] = Math.min(minRGB[i], c_rgb[i]);
+                    maxRGB[i] = Math.max(maxRGB[i], c_rgb[i]);
+                }
+            }
+            // TODO: Anti-buffer should remove similarity? but that makes no sense imo
+            // What does anti-buffer mean? It cant be what matches template
+            // It would need to be a mask to be useful- so it just isnt
+            // const anti_rgb = [0,0,0];
+            // for (const antiBuffer of invalidBuffers) {
+            //     let c_rgba = antiBuffer.slice(px_offset, 3);
+            // }
+            // Get the average color
+            const avg_rgba = rgb.map(val => Math.trunc(val/validBuffers.length));
+            // Set ALPHA to how small the box is
+            const cubeArea = minRGB.map((val, idx) => 
+                Math.max(0, maxRGB[idx] - val - ignoreDim))
+            .reduce((v1, v2) => v1*v2, 1);
+            avg_rgba[3] = Math.round(255 - 255 * 
+                ((cubeArea/maxCube)**3 / maxCube**3));
+
+            // Now, put the image in our compareCanvas
+            imgData.data.set(avg_rgba, px_offset);
+            // console.debug(`${px_offset} : ${avg_rgba}`)
+
+            // ya thats it
+        }
+
+        ctx.putImageData(imgData, 0, 0)
     }
 
 }
@@ -579,7 +636,7 @@ class ColorThreshold {
 //  TODO: Rewrite this- its really annoying to handle both event things
 self.addEventListener("message",  (event) => {
     const eventName = event.data.event
-    // console.debug(`Worker Event: ${eventName}`)
+    console.debug(`Worker Event: ${eventName}`)
 
     switch(eventName) {
         case ColorEvent.REGISTER_CANVAS:
@@ -611,9 +668,14 @@ self.addEventListener("message",  (event) => {
             ColorThreshold.registerFlag(event.data.buffer)
             break;
 
-        case "cutRectImage":
+        case ColorEvent.CUT_RECT_IMAGE:
             const {rectBuffer, rectObj} = event.data
             ColorThreshold.registerCutBuffer(rectBuffer, rectObj)
+            break;
+        
+        case ColorEvent.IDENTIFY:
+            const {bufferArr, bufferValidFlag, rectObj2} = event.data;
+            ColorThreshold.identTemplateImage(bufferArr, bufferValidFlag, rectObj2);
             break;
 
         default:

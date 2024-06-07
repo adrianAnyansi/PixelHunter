@@ -1,29 +1,17 @@
-// Copying
-class ColorEvent {
-    static REGISTER_CANVAS = 'REGISTER_CANVAS'
-    static REGISTER_DATA = 'REGISTER_DATA'
+// Main class, still messy
 
-    static PLOT_READY = "PLOT_READY"
-    static WHEEL_EVENT = "WHEEL_EVENT"
-    static MOUSE_EVENT = "MOUSE_EVENT"
-    static INPUT_EVENT = "INPUT_EVENT"
-
-    static FLUSH_EVENT = "FLUSH_EVENT"
-}
-
-class ThreeJSEvent {
-    static ZOOM = "ZOOM_EVENT"
-}
+import { DrawingMonitor } from "./DrawObjects.js"
+import { ColorEvent } from "./event_module.js";
 
 // First, build main system
 
 /** Main control state */
-class App {
+export class App {
     static STATES = {
         NONE: 'NONE',
         RECT: 'RECT',
         COLOR: 'COLOR',
-        IDENTITY: 'IDENTITY'
+        IDENTIFY: 'IDENTITY'
     }
     static state = App.STATES.NONE;
     static visibleTabIndex = -1;
@@ -38,18 +26,28 @@ class App {
     static colorStateBtn = document.getElementById("color_btn");
     static identStateBtn = document.getElementById("ident_btn");
 
+    /** Init app and start */
+    static Build() {
+        this.rectStateBtn.addEventListener('click', ()=>App.switchState.bind(App.STATES.RECT))
+        this.colorStateBtn.addEventListener('click', ()=>App.switchState(App.STATES.COLOR))
+        this.identStateBtn.addEventListener('click', 
+            ()=>WorkerMonitor.sendIdentifyBuffer(drawMonitor.drawRect.toNormArray()))
+
+        document.querySelector("#remove_btn").addEventListener('click', ()=>removeImage())
+    }
+
     /** switch app state to a new state */
     static switchState(new_state) {
         switch(new_state) {
             case App.STATES.NONE:
                 App.rectStateBtn.disabled =  false
                 App.colorStateBtn.disabled = false;
-                // App.identStateBtn.disabled = false;
+                App.identStateBtn.disabled = false;
                 break;
             case App.STATES.RECT:
                 App.rectStateBtn.disabled = true
                 App.colorStateBtn.disabled = false;
-                // App.identStateBtn.disabled = false;
+                App.identStateBtn.disabled = false;
                 App.switchToRectMode()
                 break
             case App.STATES.COLOR:
@@ -60,8 +58,10 @@ class App {
                 App.rectStateBtn.disabled = false
                 App.colorStateBtn.disabled = true;
                 App.switchToColorMode()
-                // App.identStateBtn.disabled = true;
+                App.identStateBtn.disabled = true;
                 break;
+
+            // NOTE: There is no IDENTIFY STATE
             default:
                 console.warn("Not implemented you dweeb")
                 return
@@ -139,13 +139,30 @@ class ImageTab {
     /**
      * 
      * @param {HTMLCanvasElement} imageCanvas 
-     * @param {CanvasRenderingContext2D} imageCanvasCtx 
      * @param {HTMLElement} imgHeader 
      */
-    constructor (imageCanvas, imageCanvasCtx, imgHeader) {
+    constructor (imageCanvas, imgHeader, index) {
+        /** @prop {HTMLCanvasElement} */
         this.canvas = imageCanvas
-        this.ctx = imageCanvasCtx
+        /** @prop {RenderingContext} */
+        this.ctx = imageCanvas.getContext('2d', {willReadFrequently:true})
         this.header = imgHeader
+        this.index = index
+    }
+
+    remove () {
+        this.canvas.parentElement.removeChild(this.canvas);
+        this.header.parentElement.removeChild(this.header)
+    }
+
+    makeVisible () {
+        this.header.classList.add('selected')
+        this.canvas.classList.add('visible')
+    }
+
+    hide () {
+        this.header.classList.remove('selected')
+        this.canvas.classList.remove('visible')
     }
 }
 
@@ -225,46 +242,64 @@ async function createNewImageCanvas(imageBlob, img_name) {
     newCanvas.classList.add("image")
     newCanvas.width = imgBitmap.width
     newCanvas.height = imgBitmap.height
-    newCanvas.getContext('2d').drawImage(imgBitmap, 0, 0)
-    addNewImageToViewer(newCanvas, img_name)
-
-}
-
-/** Add image to viewer + tab header + focus */
-function addNewImageToViewer(newImgCanvas, img_name) {
+    // addNewImageToViewer(newCanvas, imgBitmap, img_name)
 
     // add canvas and add new tab
-    imageViewerDiv.appendChild(newImgCanvas)
+    imageViewerDiv.appendChild(newCanvas)
     const imgHeader = document.createElement('p')
     const tab_idx = ImageElTracker.length
     // imgHeader.textContent = `image_${tab_idx}`
-    imgHeader.textContent = `${img_name}(${tab_idx})`
-    imgHeader.addEventListener('click', swapToImage.bind(this, tab_idx))
+    imgHeader.textContent = `${img_name}`
     imageTabHeaderDiv.appendChild(imgHeader)
-
-    let imgTracker = new ImageTab(newImgCanvas, newImgCanvas.getContext('2d', { willReadFrequently: true }), imgHeader)
-    ImageElTracker.push(imgTracker)
-    console.log("pushed new img")
-
-    swapToImage(tab_idx)
     
+    // const ctx = newCanvas.getContext('2d', {willReadFrequently: true})
+
+    const imgTracker = new ImageTab(newCanvas, imgHeader, tab_idx)
+    imgTracker.ctx.drawImage(imgBitmap, 0, 0)
+    ImageElTracker.push(imgTracker)
+    
+    imgHeader.addEventListener('click', swapToImage.bind(this, null, imgTracker))
+    // console.log("pushed new img")
+
+    swapToImage(tab_idx, null)
+    // TODO: Go to RECT state
 }
 
-function swapToImage(tab_idx) {
+/**
+ * Swap to ImageTab
+ * @param {*} imgTab 
+ */
+function swapToImage(tab_idx, imgTab) {
+    tab_idx ??= imgTab.index
     if (tab_idx >= ImageElTracker.length) return
 
     if (visibleTabIndex >= 0 && visibleTabIndex != tab_idx) {
-        let currTabTracker = ImageElTracker[visibleTabIndex]
-        currTabTracker.canvas.classList.remove('visible')
-        currTabTracker.header.classList.remove('selected')
+        ImageElTracker[visibleTabIndex].hide()
     }
 
     visibleTabIndex = parseInt(tab_idx)
-    ImageElTracker[tab_idx].header.classList.add('selected')
-    ImageElTracker[tab_idx].canvas.classList.add('visible')
+    ImageElTracker[tab_idx].makeVisible()
 }
 
-class WorkerMonitor {
+function removeImage() {
+    
+    if (visibleTabIndex >= 0) {
+        let currTabTracker = ImageElTracker[visibleTabIndex]
+        currTabTracker.remove()
+        ImageElTracker.splice(visibleTabIndex, 1)
+        // Update indexes
+        for (let i=visibleTabIndex; i<ImageElTracker.length; i++) {
+            ImageElTracker[i].index = i
+        }
+        
+        visibleTabIndex--;
+        ImageElTracker[visibleTabIndex]?.makeVisible()
+    }
+}
+
+
+
+export class WorkerMonitor {
     static worker = new Worker("ColorGraph.js", { type: "module" });
     static plotDrawn = false;
 
@@ -294,10 +329,26 @@ class WorkerMonitor {
         const dataArray = tabTracker.ctx.getImageData(...rect).data.buffer
         document.querySelector('canvas.compare').classList.add('cut')
 
-        WorkerMonitor.worker.postMessage({ event: 'cutRectImage',
+        WorkerMonitor.worker.postMessage({ event: ColorEvent.CUT_RECT_IMAGE,
             rectBuffer: dataArray,
             rectObj: drawMonitor.rectObj
         }, [dataArray])
+    }
+
+    /** Sends all buffers for identify to worker */
+    static sendIdentifyBuffer() {
+        const imgArrayBuffers = [];
+        const rect = drawMonitor.drawRect.toNormArray()
+        for (const imgTracker of ImageElTracker) {
+            imgArrayBuffers.push(imgTracker.ctx.getImageData(...rect).data.buffer)
+        }
+        document.querySelector('canvas.compare').classList.add('ident')
+
+        WorkerMonitor.worker.postMessage({ event: ColorEvent.IDENTIFY,
+            bufferArr: imgArrayBuffers,
+            bufferValidFlag: ImageElTracker.map( val => true),
+            rectObj2: drawMonitor.rectObj
+        }, imgArrayBuffers)
     }
 
     static setupThreeCanvas(canvas) {
@@ -502,6 +553,11 @@ class WorkerMonitor {
         document.querySelector("#rect_down").value = rectObj.y + rectObj.height
         document.querySelector(".rect_down").querySelector('span').textContent = rectObj.y + rectObj.height
         // segments cant be changed programmatically
+        rectCoordDisplayEl.textContent = rectObj.toString() + ` s:${segments}`
+    }
+
+    static updateMouseText(text) {
+        mousePosDisplayEl.textContent = text
     }
 
     static pixelCountFlag = null;
@@ -514,7 +570,7 @@ class WorkerMonitor {
 
         this.pixelCountFlag = new SharedArrayBuffer(1,  { maxByteLength: 16 });
         this.pxFlagDataView = new DataView(this.pixelCountFlag)
-        WorkerMonitor.worker.postMessage({ event: "flag",
+        WorkerMonitor.worker.postMessage({ event: ColorEvent.FLAG,
             buffer: this.pixelCountFlag})
     }
 
@@ -523,6 +579,7 @@ class WorkerMonitor {
 /** Pretend this is the IILE shit */
 function init () {
     // On DOM load
+    App.Build()
     App.switchState(App.STATES.RECT)
     // TODO: Make a quick COLOR mode function for testing graph stuff
     // App.switchToDebugColorMode()
@@ -540,7 +597,7 @@ function init () {
 
     // testing
     drawMonitor.updateDrawRect(
-        {x: 30, y:30, width: 50, height: 50, segments: 1}
+        {x: 30, y:30, width: 50, height: 50, segments: 0}
     )
     // drawMonitor.queue.push(new DrawableRectangle(...[1550, 157, -301, 535]))
 

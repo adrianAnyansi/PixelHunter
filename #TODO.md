@@ -1,26 +1,32 @@
 # Overall
+RECT & segments are done, just need cleanup
+COLOR is probably done unless I send a day rewriting the graph controls
 
-So current aim is: the values need to update the current system to work.
-This means:
-RECT for the seperation
-SEGMENTS for the cutting
-COLOR perf improvements since I have to update type color
-COLOR copy after that is complete
-
-IDENTIFY work for Waiting For Start, although right now it's fine honestly
-
-NOTE: I added worker input but suddenly its too fast to be interrupted reliably? Might be async change
+So I'm dumb
+I can just save the image, then build a template
 
 # Today
-Segmented rect code & cleanup
-    add button
-    add listener & update ranges
-    (use compare canvas to display with button, split them)
-    Rewrite the ranges and such
+Header improvment
+The identify work
 
-Looking like: [x:1652, y:125, w:-264, h:955] are my coords
-
+## Other
+Segmented rect height as output too
 After segments, I need to verify the waiting for start code
+
+## Thoughts
+So the old code was simple:
+    Look at rectangle, does Rectangle meet X threshold?
+
+I'm thinking of more complicated ways to solve this and- it's really unnecessary
+I already know that simple color matching will do the job, its just better to do something cheap
+
+need match/non-match to remove backgrounds, 
+    but for time; better to just ignore that for now.
+
+Computing similar colors and changing them will cause problems for the parser
+
+
+
 
 Or start writing the identify code (shouldn't be too hard)
     take all images & px in the rect
