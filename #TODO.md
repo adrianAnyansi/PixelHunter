@@ -1,69 +1,46 @@
 # Overall
-RECT & segments are done, just need cleanup
-COLOR is probably done unless I send a day rewriting the graph controls
+All modes done, need cleanup
+UI cleanup as well probably, the buttons are slightly distracting
 
-So I'm dumb
-I can just save the image, then build a template
 
 # Today
-Header improvment
-The identify work
+Fix (forgot what I was typing)
 
 ## Other
 Segmented rect height as output too
 After segments, I need to verify the waiting for start code
+Clipboard maybe? How hard is that code
+Zoom for images maybe (pixel measurement)
+Hotkey for changing images quickly
 
-## Thoughts
-So the old code was simple:
-    Look at rectangle, does Rectangle meet X threshold?
+# Thoughts
+With identify done, I'm going to go back to server upgrades.
 
-I'm thinking of more complicated ways to solve this and- it's really unnecessary
-I already know that simple color matching will do the job, its just better to do something cheap
+## After
+I want to play around with the temporal sharpening stuff server side
+After that probably going to switch projects, I've been on this for 1.5 months
 
-need match/non-match to remove backgrounds, 
-    but for time; better to just ignore that for now.
+## Size
+Playing around with the cube sizing makes it much easier to see the clump of cubes
+However if I use a big buffer, the scaling doesn't work since it spreads out amongst multiple areas.
+Manual slider seems like the solution; since I never know what % of the image is what I need.
 
-Computing similar colors and changing them will cause problems for the parser
+## Rotations & Translations
+I would much rather have full freedom of movement like blender than what I have now.
+I could stick all lines/circles into the cube and disable visibility until needed.
 
+1. All translations show the line of translation, and are relative to the current rotation.
+    Basically rotation first, then translation.
+    Or maybe separate that?
 
-
-
-Or start writing the identify code (shouldn't be too hard)
-    take all images & px in the rect
-    (no need to show match/non-match, just account for background changes with images)
-    compute only similar colors (with redmean detecting blobs with weighing & flood-fill)
-    Spit out the computed probabilities for the program
-
-After that, manually determine the color cubes
-    then take that data and update the information in current code
+2. Rotations would love to have a circle for the current rotation section.
+    Also that little thingy that shows how much you rotated but thats extra.
     
-Run that system and build testing to run different settings
-
-1. Add input ranges to rect + new order
-2. add copy to clipboard button
-4. Rewrite the code for tracking drawings so I can always reference to the main rectangle
-5. Make segments & segment code; need to write that to file probably?
-    Or at least segment the copy in COLOR mode?
-
-## Thoughts
-
-Make rotations and translations easier to do
-    Maybe rewrite that logic so I can treat it like a pixel thingy
-    Fix the wheel event so it's easier to use, bigger hitbox for accidents
-    show direction of change when hovered
-
+### Color helping for Compare canvas
 Create the picker for compare canvas
     Show what pixel goes to cube map
 
 Inversely, show the captured pixels within the cube... somehow (instancing is kinda weird)
-
-
-## Other
-Did some research on interrupting-
-most likely to use a AbortController for async
-or Atomics which is basically a shared memory thing;
-both are pretty indepth and I don't really need it unless I want to improve the tool later on
-
 
 # Mode completion
 Overall design is split into separate parts to help with pixel hunter
@@ -130,6 +107,3 @@ Probably best to index by colour when colouring; so when I'm de-referencing for 
 Took me like 6 hours to have insertables images, I can select rectangles, ahhhh its so nice to just have a normal, regular UI experience. Geez
 
 # Bugs
-
-Mouse-move works on scrollbars, which fucks up the hover.
-Negative margins could prob fix this

@@ -117,7 +117,7 @@ export class DrawingMonitor {
             }
         }
 
-        WorkerMonitor.updateRectControls(this.drawRect)
+        WorkerMonitor.updateRectControls(this.drawRect, this.segmentList.length)
         
 
     }

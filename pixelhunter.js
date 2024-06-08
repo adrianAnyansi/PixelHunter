@@ -28,7 +28,7 @@ export class App {
 
     /** Init app and start */
     static Build() {
-        this.rectStateBtn.addEventListener('click', ()=>App.switchState.bind(App.STATES.RECT))
+        this.rectStateBtn.addEventListener('click', ()=>App.switchState(App.STATES.RECT))
         this.colorStateBtn.addEventListener('click', ()=>App.switchState(App.STATES.COLOR))
         this.identStateBtn.addEventListener('click', 
             ()=>WorkerMonitor.sendIdentifyBuffer(drawMonitor.drawRect.toNormArray()))
@@ -103,6 +103,7 @@ export class App {
 
         appFrameDiv.classList.add(App.RECT_MODE)
         appFrameDiv.classList.remove(App.COLOR_MODE)
+        App.state = App.STATES.RECT
 
         // TODO: Clear worker?
         // Set draw monitor to low width
@@ -327,6 +328,7 @@ export class WorkerMonitor {
 
     static sendCutData(tabTracker, rect) {
         const dataArray = tabTracker.ctx.getImageData(...rect).data.buffer
+        document.querySelector('canvas.compare').classList.remove(['cut', 'ident'])
         document.querySelector('canvas.compare').classList.add('cut')
 
         WorkerMonitor.worker.postMessage({ event: ColorEvent.CUT_RECT_IMAGE,
@@ -342,6 +344,7 @@ export class WorkerMonitor {
         for (const imgTracker of ImageElTracker) {
             imgArrayBuffers.push(imgTracker.ctx.getImageData(...rect).data.buffer)
         }
+        document.querySelector('canvas.compare').classList.remove(['cut', 'ident'])
         document.querySelector('canvas.compare').classList.add('ident')
 
         WorkerMonitor.worker.postMessage({ event: ColorEvent.IDENTIFY,
@@ -538,7 +541,7 @@ export class WorkerMonitor {
         }, {passive: false})
     }
 
-    static updateRectControls (rectObj) {
+    static updateRectControls (rectObj, segmentsLen) {
         // need to directly update controls like this-
         // validate loop is a concern!!!
         document.querySelector("#rect_left").value = rectObj.x
@@ -553,7 +556,7 @@ export class WorkerMonitor {
         document.querySelector("#rect_down").value = rectObj.y + rectObj.height
         document.querySelector(".rect_down").querySelector('span').textContent = rectObj.y + rectObj.height
         // segments cant be changed programmatically
-        rectCoordDisplayEl.textContent = rectObj.toString() + ` s:${segments}`
+        rectCoordDisplayEl.textContent = rectObj.toString() + ` s:${segmentsLen}`
     }
 
     static updateMouseText(text) {

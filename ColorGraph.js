@@ -281,7 +281,7 @@ class ColorThreshold {
     /** Take offscreen canvas object and register to it */
     static registerDrawCanvas(offCanvas) {
         ColorThreshold.compareCanvas = offCanvas;
-        ColorThreshold.compareCtx = offCanvas.getContext('2d', {willReadFrequently: true});
+        ColorThreshold.compareCtx = offCanvas.getContext('2d', {willReadFrequently: true, transparent: true});
     }
 
     /** Input buffer for cut image */
@@ -580,50 +580,77 @@ class ColorThreshold {
         const ctx = ColorThreshold.compareCtx
         const imgData = ctx.getImageData(0, 0, rectObj.width, rectObj.height);
 
-        const ignoreDim = 25;
-        const maxCube = (255-ignoreDim)*3;
+        const ignoreDim = 0;
+        const maxCube = (255-ignoreDim)**3;
+        const cutOffArea = 50**3;
 
         const dataViews = buffers.map(buffer => new DataView(buffer))
         for (let px_offset=0; px_offset+4 < buffers[0].byteLength; px_offset+=4) {
 
             const rgb = [0,0,0];
-            const minRGB = [255,255,255];
-            const maxRGB = [0,0,0];
+            // const minRGB = [255,255,255];
+            // const maxRGB = [0,0,0];
+            const rgbAggr = [
+                {mean:0, count:0, M2:0},
+                {mean:0, count:0, M2:0},
+                {mean:0, count:0, M2:0},
+            ]
             // Pixel so I gotta save on cycles
             for (const dv of dataViews) {
                 const c_rgb = [dv.getUint8(px_offset), dv.getUint8(px_offset+1), dv.getUint8(px_offset+2)];
                 for (let i=0; i<3; i++) {
-                    rgb[i] += c_rgb[i];
                     // NOTE: This could be axis aligned but ya
                     // TODO: This needs to be weighed per measurement or outliers dominate
-                    minRGB[i] = Math.min(minRGB[i], c_rgb[i]);
-                    maxRGB[i] = Math.max(maxRGB[i], c_rgb[i]);
+                    ColorThreshold.runningVariance(rgbAggr[i], c_rgb[i])
                 }
             }
-            // TODO: Anti-buffer should remove similarity? but that makes no sense imo
-            // What does anti-buffer mean? It cant be what matches template
-            // It would need to be a mask to be useful- so it just isnt
-            // const anti_rgb = [0,0,0];
-            // for (const antiBuffer of invalidBuffers) {
-            //     let c_rgba = antiBuffer.slice(px_offset, 3);
-            // }
-            // Get the average color
-            const avg_rgba = rgb.map(val => Math.trunc(val/validBuffers.length));
-            // Set ALPHA to how small the box is
-            const cubeArea = minRGB.map((val, idx) => 
-                Math.max(0, maxRGB[idx] - val - ignoreDim))
-            .reduce((v1, v2) => v1*v2, 1);
-            avg_rgba[3] = Math.round(255 - 255 * 
-                ((cubeArea/maxCube)**3 / maxCube**3));
+            // Get the average color & standard deviation
+            const avg_rgba = []
+            const var_rgba = []
+            for (let i=0; i<3; i++) {
+                const {mean, variance} = ColorThreshold.calcFromAggr(rgbAggr[i]);
+                avg_rgba[i] = Math.trunc(mean)
+                var_rgba[i] = Math.max(0, Math.trunc(Math.sqrt(variance)) - ignoreDim)
+            }
+
+            // Set ALPHA to how small the volume is
+            const cubeArea = var_rgba.reduce((v1, v2) => v1*v2, 1);
+            if (cubeArea >= cutOffArea)
+                avg_rgba[3] = 0
+            else
+                avg_rgba[3] = Math.round(255 - 255 * ((cubeArea/cutOffArea)));
+            // console.debug(var_rgba, avg_rgba[3])
 
             // Now, put the image in our compareCanvas
             imgData.data.set(avg_rgba, px_offset);
-            // console.debug(`${px_offset} : ${avg_rgba}`)
-
-            // ya thats it
         }
 
         ctx.putImageData(imgData, 0, 0)
+    }
+
+    /** Running average and variance 
+     * Implemented from wikipedia Welford algorithm
+    */
+    static runningVariance(aggr, val) {
+        aggr.count += 1
+        const delta = val - aggr.mean
+        aggr.mean += delta/aggr.count
+        const delta2 = val - aggr.mean
+        aggr.M2 += delta * delta2
+    }
+
+    /**
+     * Calculate value from aggregate
+     */
+    static calcFromAggr(aggr) {
+        if (aggr.count < 2) {
+            return 1 // don't do this
+        }
+        return {
+            mean: aggr.mean,
+            variance : aggr.M2/aggr.count,
+            sample_variance: aggr.M2/(aggr.count-1)
+        }
     }
 
 }
