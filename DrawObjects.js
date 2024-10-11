@@ -256,7 +256,9 @@ class DrawableRectangle {
     }
 
     toString() {
-        return `[x:${this.x}, y:${this.y}, w:${this.width}, h:${this.height}]`
+        // return `{x:${this.x}, y:${this.y}, w:${this.width}, h:${this.height}}`
+        const [x,y,w,h] = this.toNormArray()
+        return `{x:${x}, y:${y}, w:${w}, h:${h}}`
     }
 
     toArray() {

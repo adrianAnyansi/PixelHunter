@@ -2,9 +2,10 @@
 All modes done, need cleanup
 UI cleanup as well probably, the buttons are slightly distracting
 
+I should have a toggle for intensity and colour for the Color mode
 
 # Today
-Fix (forgot what I was typing)
+Fix (forgot what I was typing)- Oh probably fix rect output since it was showing segments as a htmlelement
 
 ## Other
 Segmented rect height as output too
