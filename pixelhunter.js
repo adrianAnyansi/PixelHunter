@@ -183,6 +183,8 @@ imageViewerDiv.addEventListener('dragover', (dragEvent) => {
 
 const mousePosDisplayEl = document.querySelector(".mouse_pos")
 const rectCoordDisplayEl = document.querySelector(".rect_coords")
+const colorCoordDisplayEl = document.querySelector(".color_info")
+const colorVisualEl = document.querySelector(".color_square")
 
 
 /** Drawing canvas (for rect & etc) */
@@ -418,6 +420,22 @@ export class WorkerMonitor {
         [offCanvas, chartOffCanvas])
     }
 
+    static registerZoomControls () {
+
+        const zoom_control = document.getElementById("zoom_range");
+        zoom_control.addEventListener("input", event => {
+            for (const el of document.getElementsByClassName("image_viewer")[0].children) {
+                el.style.scale = zoom_control.value
+            }
+        })
+        // TODO: Very bad, no boundary checks and just works weird cause of float
+        zoom_control.addEventListener("wheel", event => {
+            const diff = (event.deltaY < 0) ? 0.1 : -0.1
+            zoom_control.value = parseFloat(zoom_control.value) + diff
+            zoom_control.dispatchEvent(new Event('input', {bubbles: true}))
+        })
+    }
+
     static registerCubeControls () {
         const cubeControls = document.getElementById("color_cube_control");
 
@@ -539,6 +557,12 @@ export class WorkerMonitor {
             targetObj.dispatchEvent(new Event('input', {bubbles: true}))
             event.preventDefault()
         }, {passive: false})
+
+        document.addEventListener('keydown', event => {
+            const keys = ['KeyW', 'KeyA', 'KeyS', 'KeyD']
+            if (keys.includes(event.code))
+                this.moveRect(event.code)
+        })
     }
 
     static updateRectControls (rectObj, segmentsLen) {
@@ -557,6 +581,45 @@ export class WorkerMonitor {
         document.querySelector(".rect_down").querySelector('span').textContent = rectObj.y + rectObj.height
         // segments cant be changed programmatically
         rectCoordDisplayEl.textContent = rectObj.toString() + ` s:${segmentsLen}`
+
+        // Get the color if rect is 1 px
+        if (Math.abs(rectObj.width) == 1 && Math.abs(rectObj.height) == 1) {
+            this.updateColorPicker(rectObj);   
+        }
+            
+    }
+
+    static updateColorPicker (rectObj) {
+        const currTabTracker = ImageElTracker[visibleTabIndex]
+
+        if (currTabTracker) {
+            const imgData = currTabTracker.ctx.getImageData(rectObj.x, rectObj.y, 
+                rectObj.width, rectObj.height)
+            const rgba = new Uint8ClampedArray(imgData.data.buffer.slice(0))
+            colorCoordDisplayEl.textContent = `(${rgba[0]}, ${rgba[1]}, ${rgba[2]}) A:${rgba[3]}`; // rgb to hex value
+            colorVisualEl.style.backgroundColor = "#"+rgba[0].toString(16).padStart(2,'0')
+                +rgba[1].toString(16).padStart(2,'0')
+                +rgba[2].toString(16).padStart(2,'0')
+        } else {
+            colorVisualEl.style.backgroundColor = "transparent"
+        }
+    }
+
+    static moveRect (key) {
+        // Move rectangle around with keyboard
+
+        const keyControl = {
+            'KeyW': [0,-1],  // up
+            'KeyS': [0,1], // down
+            'KeyA': [-1,0],  // left
+            'KeyD': [1,0], // right
+        }
+
+        const drawRect = drawMonitor.drawRect;
+        drawRect.x += keyControl[key][0]
+        drawRect.y += keyControl[key][1]
+        // TODO: Check that we don't go over the limits of the image
+        this.updateColorPicker(drawRect)
     }
 
     static updateMouseText(text) {
@@ -593,6 +656,7 @@ function init () {
     WorkerMonitor.sendCubeSharedBuffer()
     WorkerMonitor.registerCubeControls()
     WorkerMonitor.registerRectControls()
+    WorkerMonitor.registerZoomControls()
 
     WorkerMonitor.sendCompareCanvas(
         document.querySelector('canvas.compare'),

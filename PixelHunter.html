@@ -44,6 +44,8 @@
             .image_viewer * {
                 position: absolute;
                 padding: 0;
+                border: 1px dashed gray;
+                transform-origin: top left;
             }
 
             .image_viewer canvas.image,
@@ -102,6 +104,9 @@
                 display:flex;
                 flex-direction: row;
             }
+            .image_info p {
+                margin: 0;
+            }
             .image_tab_header {
                 /* grid-row: 2 */
                 display: flex;
@@ -113,6 +118,7 @@
                 user-select: none;
                 font-size: 10;
                 font-weight: 800;
+                margin: 0;
             }
             .image_tab_header p.selected {
                 background-color:rgb(68, 180, 218)
@@ -150,6 +156,17 @@
             #remove_btn {
                 background-color: #e97373;
             }
+
+            .title {
+                margin: 0;
+            }
+
+            .color_square {
+                width: .1em;
+                height: .1em;
+                background-color: transparent;
+                display: inline-block;
+            }
         </style>
     </head>
     <body>
@@ -163,7 +180,6 @@
             <div class="image_tab_header">
                 <!-- <div>image_1</div> -->
             </div>
-            <canvas class="compare"></canvas>
             <div class="image_info">
                 <p class="visible_debug"></p>
                 <p>Mouse:<span class="mouse_pos">(0,0)</span></p>
@@ -171,10 +187,13 @@
                 <p>Rect: <span class="rect_coords"></span></p>
                 <p>Box: <span class="box_info"></span></p>
             </div>
+            <canvas class="compare"></canvas>
+            <!-- <div class="color_info_box">
+            </div> -->
             
 
             <div class="controls">
-                <p>Title: Pixel Hunter</p>
+                <p class="title">Pixel Hunter</p>
                 <button id="remove_btn">REMOVE IMAGE</button>
                 <p>STATE: <span id="state_display"></span></p>
                 <button id="rect_btn" disabled >RECT</button>
@@ -245,6 +264,16 @@
                         <input id="z_rot" type="range" min="-180" max="180" value="0">
                         <div><label for="z_rot">Z Rot</label><span>0</span></div>
                     </div>
+                </div>
+
+                <div id="color_identity">
+                    <p>Color(1p): <span class="color_square"></span></p>
+                    <p class="color_info"></p>
+                </div>
+
+                <div class="zoom_control">
+                    <label for="zoom">Zoom</label>
+                    <input id="zoom_range" name="x_pos" type="number" min="1" max="3" value="1" step="0.1">
                 </div>
             </div>
         </div>
