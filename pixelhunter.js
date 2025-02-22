@@ -424,14 +424,18 @@ export class WorkerMonitor {
 
         const zoom_control = document.getElementById("zoom_range");
         zoom_control.addEventListener("input", event => {
-            for (const el of document.getElementsByClassName("image_viewer")[0].children) {
-                el.style.scale = zoom_control.value
-            }
+            const allRules = Array.from(document.styleSheets[0].cssRules)
+            const imgViewerChildrenRule = allRules.filter(cssRule => cssRule.selectorText == '.image_viewer *')[0]
+
+            imgViewerChildrenRule.style.scale = zoom_control.value
+            // for (const el of document.getElementsByClassName("image_viewer")[0].children) {
+            //     el.style.scale = zoom_control.value
+            // }
         })
         // TODO: Very bad, no boundary checks and just works weird cause of float
         zoom_control.addEventListener("wheel", event => {
             const diff = (event.deltaY < 0) ? 0.1 : -0.1
-            zoom_control.value = parseFloat(zoom_control.value) + diff
+            zoom_control.value = (parseFloat(zoom_control.value) + diff).toFixed(1)
             zoom_control.dispatchEvent(new Event('input', {bubbles: true}))
         })
     }

@@ -1,27 +1,24 @@
 # Overall
-All modes done, need cleanup
-UI cleanup as well probably, the buttons are slightly distracting
-
-I should have a toggle for intensity and colour for the Color mode
+Its very stable, I just add things I need.
+cleanup probably, UI is a bit jank
 
 # Today
-Fix (forgot what I was typing)- Oh probably fix rect output since it was showing segments as a htmlelement
+Zoom slightly better UI, remove range and add a canvas showing the zoom box
 
-## Other
-Segmented rect height as output too
-After segments, I need to verify the waiting for start code
-Clipboard maybe? How hard is that code
-Zoom for images maybe (pixel measurement)
-Hotkey for changing images quickly
+# Goals & Nice to Haves
+- Would be nice to have a function that runs on the image, so I can test things.
+    Like color automatically shows stuff in box; but imagine more
+    Like I'm trying to test line detection and having a LIVE debug UI would be so nice
 
-# Thoughts
-With identify done, I'm going to go back to server upgrades.
+- I wish there was a way to host PixelHunter without needing to open the server
 
-## After
-I want to play around with the temporal sharpening stuff server side
-After that probably going to switch projects, I've been on this for 1.5 months
+- Copying output, need a button that copies the rectangle, box and color.
+    Make a component that copies anything to clipboard
+    Remember to add segmented rect height for this
 
-## Size
+- Hotkey for changing images quickly
+
+## Color Cube Size
 Playing around with the cube sizing makes it much easier to see the clump of cubes
 However if I use a big buffer, the scaling doesn't work since it spreads out amongst multiple areas.
 Manual slider seems like the solution; since I never know what % of the image is what I need.
