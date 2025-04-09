@@ -48,6 +48,10 @@
                 transform-origin: top left;
             }
 
+            .image_viewer .chart{
+                scale: 1;
+            }
+
             .image_viewer canvas.image,
             .color_mode .image_viewer canvas.image {
                 display: none;
@@ -85,6 +89,10 @@
                 display: inherit;
                 height: 100%;
                 width: 100%;
+                --transW: transparent;
+                --transB: #00000000;
+                background: repeating-linear-gradient(90deg, var(--transB), var(--transB) 20px, var(--transW) 20px, var(--transW) 40px),
+                    repeating-linear-gradient(0deg, var(--transB), var(--transB) 20px, var(--transW) 20px, var(--transW) 40px);
             }
 
             .image_viewer_disclaimer {
@@ -166,6 +174,12 @@
                 height: .1em;
                 background-color: transparent;
                 display: inline-block;
+            }
+
+            .color_cube_control .scroller,
+            .color_cube_control .scroller div,
+            .scroller {
+                padding: 0;
             }
         </style>
     </head>
@@ -264,6 +278,10 @@
                         <input id="z_rot" type="range" min="-180" max="180" value="0">
                         <div><label for="z_rot">Z Rot</label><span>0</span></div>
                     </div>
+                    <div class="scroller">
+                        <input id="cube_scale" type="range" min="1" max="50" value="0.5">
+                        <div><label for="cube_scale">Cube Scale</label><span>1</span></div>
+                    </div>
                 </div>
 
                 <div id="color_identity">
@@ -273,7 +291,7 @@
 
                 <div class="zoom_control">
                     <label for="zoom">Zoom</label>
-                    <input id="zoom_range" name="x_pos" type="number" min="1" max="3" value="1" step="0.1">
+                    <input id="zoom_range" name="x_pos" type="number" min="1" max="3" value="0.5" step="0.1">
                 </div>
             </div>
         </div>

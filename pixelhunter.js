@@ -428,16 +428,16 @@ export class WorkerMonitor {
             const imgViewerChildrenRule = allRules.filter(cssRule => cssRule.selectorText == '.image_viewer *')[0]
 
             imgViewerChildrenRule.style.scale = zoom_control.value
-            // for (const el of document.getElementsByClassName("image_viewer")[0].children) {
-            //     el.style.scale = zoom_control.value
-            // }
         })
+        
         // TODO: Very bad, no boundary checks and just works weird cause of float
         zoom_control.addEventListener("wheel", event => {
             const diff = (event.deltaY < 0) ? 0.1 : -0.1
             zoom_control.value = (parseFloat(zoom_control.value) + diff).toFixed(1)
             zoom_control.dispatchEvent(new Event('input', {bubbles: true}))
+            event.preventDefault()
         })
+        zoom_control.dispatchEvent(new Event('input', {bubbles: true}))
     }
 
     static registerCubeControls () {
@@ -623,6 +623,11 @@ export class WorkerMonitor {
         drawRect.x += keyControl[key][0]
         drawRect.y += keyControl[key][1]
         // TODO: Check that we don't go over the limits of the image
+        if (drawRect.width == 0)
+            drawRect.width = 1
+        if (drawRect.height == 0)
+            drawRect.height = 1
+        
         this.updateColorPicker(drawRect)
     }
 

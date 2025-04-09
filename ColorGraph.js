@@ -15,7 +15,7 @@ class ColorThreshold {
     static compareCanvas = null;
     /** @type {RenderingContext} rendering context */
     static compareCtx = null;
-    /** @property {Map[number[], number[]]} */
+    /** @property {Map<string, number[]>} */
     static colorToPixel = new Map();
     static coord_x = [];
     static coord_y = [];
@@ -37,13 +37,30 @@ class ColorThreshold {
         ]
     }
 
-    /** Return hex number from image data */
+    /** Return hex number from image data 
+     * @returns {Number}
+    */
     static getRGBFromArray(rgb_arr) {
         return (rgb_arr[0] << 8*2) 
              + (rgb_arr[1] << 8*1)
              +  rgb_arr[2]
     }
     
+    
+    static INT8MASK = 0xFF;
+
+    /**
+     * Convert decimal to RGB
+     * @param {Number} decimal 
+     * @returns {RGB}
+     */
+    static castRGB(decimal) {
+        return new Uint8Array([
+            (decimal >> 8*2) & ColorThreshold.INT8MASK,
+            (decimal >> 8*1) & ColorThreshold.INT8MASK,
+            decimal & ColorThreshold.INT8MASK,
+        ])
+    }
 
     static renderer = null;
     static scene = null;
@@ -62,7 +79,8 @@ class ColorThreshold {
      */
     static initThrees(offCanvas) {
         // console.debug(offCanvas)
-        this.renderer = new THREE.WebGLRenderer({antialias: true, canvas: offCanvas});
+        this.renderer = new THREE.WebGLRenderer({antialias: true, canvas: offCanvas, alpha:true});
+        this.renderer.setClearColor( 0xffffff, 0);
 
         const fov = 75;
         const aspect = 2;  // the canvas default
@@ -166,8 +184,8 @@ class ColorThreshold {
 
     static addBoundingWireframeBox() {
         if (!this.boundBox) {
-            const boxGeometry = new THREE.BoxGeometry(1, 1, 1);
-            const wireframe = new THREE.WireframeGeometry(boxGeometry);
+            // const boxGeometry = new THREE.BoxGeometry(1, 1, 1);
+            // const wireframe = new THREE.WireframeGeometry(boxGeometry);
 
             const boxLines = new THREE.LineSegments( this.box(), new THREE.LineDashedMaterial( { dashSize: 100, gapSize: 50 } ) );
             boxLines.material.depthTest = false;
@@ -175,6 +193,13 @@ class ColorThreshold {
             boxLines.material.transparent = true;
 
             this.boundBox = boxLines;
+
+            const pointGeometry = new THREE.Geometry();
+            pointGeometry.vertices.push(new THREE.Vector3())
+            const centerPoint = new THREE.Points(pointGeometry, new THREE.PointsMaterial(
+                {size: 1, sizeAttenuation: false}
+            ))
+            this.boundBox.add(centerPoint)
         }
 
         this.scene.add(this.boundBox)
@@ -355,6 +380,10 @@ class ColorThreshold {
 
     static clearScene() {
         this.scene.clear();
+        if (this.instanceMesh) {
+            this.instanceMesh.dispose()
+            this.instanceMesh = null
+        }
         // if (this.boundBox)
         //      this.boundBox.dispose()
     }
@@ -411,15 +440,21 @@ class ColorThreshold {
         for (let i=0; i < this.imgData.data.length; i+=4) {
 
             const rgb = this.getRGBFromImgData(i)
+            const decRGB = this.getRGBFromArray(rgb)
 
-            const arr = this.colorToPixel.get(rgb) ?? []
+            const arr = this.colorToPixel.get(decRGB) ?? []
             if (arr.length == 0) {
-                this.colorToPixel.set(rgb, arr);
+                this.colorToPixel.set(decRGB, arr);
             }
             arr.push(i);
         }
 
-        // TODO: Go back and modify cube based on number of things
+        // const colorSorted = []
+        // for (const [rgbstr, arr] of this.colorToPixel.entries()) {
+        //     colorSorted.push([arr.length, rgbstr])
+        // }
+        // colorSorted.sort()
+        // console.debug('the count ',colorSorted)
         
         const time_taken = performance.now() - s_ts;
         console.debug(`Calc Pixels for ${this.imgData.data.length}px, ${this.colorToPixel.size} colors in ${time_taken}ms`)
@@ -436,12 +471,10 @@ class ColorThreshold {
 
         let cubeNum = 0;
         // TODO: Adjustable scaleFactor makes it much easier to see useful pixels
-        // Implement slider based on testing
-        // const scaleFactor = this.imgData.data.length * 1/100_000; 
         const matrix = new THREE.Matrix4();
-        for (let [rgb, arr] of this.colorToPixel) {
-            // const scale = arr.length/scaleFactor;
+        for (let [decrgb, _arr] of this.colorToPixel) {
             const scale = 1;
+            const rgb = this.castRGB(decrgb)
             matrix.makeScale(scale, scale, scale)
             matrix.setPosition(...rgb)
             instanceMesh.setMatrixAt(cubeNum, matrix)
@@ -449,6 +482,31 @@ class ColorThreshold {
             cubeNum++
         }
         this.scene.add(instanceMesh);
+        this.instanceMesh = instanceMesh
+
+        this.renderOnRequestFrame();
+    }
+
+    static MAX_SCALE = 5;
+
+    /**
+     * scale pixel cubes from the instanceMesh
+     */
+    static scaleCalcPixels(scaleFactor) {
+        // updating cube scale factor
+        console.debug("Updating cube scale factor for "+this.instanceMesh.count+" pxs")
+        let cubeNum = 0;
+        
+        const matrix = new THREE.Matrix4();
+        for (const [decrgb, arr] of this.colorToPixel) {
+            const scale = Math.min(arr.length/scaleFactor, this.MAX_SCALE);
+            const rgb = this.castRGB(decrgb)
+            matrix.makeScale(scale, scale, scale)
+            matrix.setPosition(...rgb)
+            this.instanceMesh.setMatrixAt(cubeNum, matrix)
+            cubeNum++
+        }
+        this.instanceMesh.instanceMatrix.needsUpdate = true;
 
         this.renderOnRequestFrame();
     }
@@ -485,7 +543,8 @@ class ColorThreshold {
             'height': boundFunc.bind(this, 2),
             'x_rot': rotFunc.bind(this, 0),
             'y_rot': rotFunc.bind(this, 1),
-            'z_rot': rotFunc.bind(this, 2)
+            'z_rot': rotFunc.bind(this, 2),
+            'cube_scale': this.scaleCalcPixels.bind(this)
         }
 
         if (propFunc[event.targetName]) {
@@ -528,7 +587,7 @@ class ColorThreshold {
         let px_iter = 0;
 
         // Take all pixels in the list and put in Set
-        for (const [rgb, arr] of this.colorToPixel) {
+        for (const [decrgb, arr] of this.colorToPixel) {
             
             if (hasInterrupt && 
                 px_iter++ % break_px_check == 0 && 
@@ -538,6 +597,7 @@ class ColorThreshold {
             }
 
             // Hope this isnt slow
+            const rgb = this.castRGB(decrgb)
             pos_obj.set(...rgb);
             pos_obj.sub(this.boundBox.position);
             pos_obj.applyQuaternion(this.boundBox.quaternion);
@@ -553,7 +613,7 @@ class ColorThreshold {
                     changedPx += arr.length;
 
                     for (let idx of arr) {
-                        copyImgData.data.set([...rgb, 255], idx);
+                        copyImgData.data.set([...rgb, 255], idx); // rgb, position
                     }
             }
         }
